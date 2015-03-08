@@ -25,8 +25,33 @@ software is available in the in the search path of the OS.
 ```r
 # Set the working directory and get the contents of the .zip file
 setwd("~/Coursera/Data Science Specialization/5. Reproducible Research/RepData_PeerAssessment1")
-system("7za l activity.zip")
+cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
+```
 
+```
+##  
+##  7-Zip (a) [64] 9.38 beta  Copyright (c) 1999-2014 Igor Pavlov  2015-01-03 
+##   
+##  Listing archive: activity.zip 
+##   
+##  -- 
+##  Path = activity.zip 
+##  Type = zip 
+##  Physical Size = 53559 
+##   
+##     Date      Time    Attr         Size   Compressed  Name 
+##  ------------------- ----- ------------ ------------  ------------------------ 
+##  2014-02-11 11:08:20 .....       350829        53385  activity.csv 
+##  ------------------- ----- ------------ ------------  ------------------------ 
+##  2014-02-11 11:08:20             350829        53385  1 files 
+##   
+##  Kernel  Time =     0.000 =    0% 
+##  User    Time =     0.000 =    0% 
+##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.017 =  100%    Physical Memory =      5 MB
+```
+
+```r
 # Load the data.table package
 library(data.table)
 
@@ -156,6 +181,39 @@ str(dt)
 
 ## What is mean total number of steps taken per day?
 
+To summarize data by group, we can use the `aggregate()` function from the base
+R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
+packages. For this assignment, we will use `data.table` interface.
+
+
+```r
+# Get the steps by date, ignore missing values
+steps_by_date = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+
+# Load the ggplot2 library
+library(ggplot2)
+
+# Plot with ggplot
+ggplot(steps_by_date, aes(x = date, y = total_steps)) +
+  geom_bar(stat = "identity") +
+  xlab("Date") +
+  ylab("Steps") +
+  ggtitle("Total Number of Steps Taken Each Day")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+```r
+# mean steps taken
+mean_steps = steps_by_date[, mean(total_steps, na.rm = TRUE)]
+
+# median steps taken
+median_steps = steps_by_date[, median(total_steps, na.rm = TRUE)]
+```
+
+During the study period, after removing the missing data, the mean steps taken per
+day was **9,354.23** and the median steps taken per day was
+**10,395**.
 
 
 ## What is the average daily activity pattern?

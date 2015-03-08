@@ -26,10 +26,10 @@ system we will use the `fread()` function from the `data.table` package. Also,
 the data loading code assumes that open source 7-Zip archive management
 software is available in the in the search path of the OS.
 
-```{r, message=FALSE}
+```{r}
 # Set the working directory and get the contents of the .zip file
 setwd("~/Coursera/Data Science Specialization/5. Reproducible Research/RepData_PeerAssessment1")
-system("7za l activity.zip")
+cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 
 # Load the data.table package
 library(data.table)
@@ -89,6 +89,34 @@ str(dt)
 
 ## What is mean total number of steps taken per day?
 
+To summarize data by group, we can use the `aggregate()` function from the base
+R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
+packages. For this assignment, we will use `data.table` interface.
+
+```{r}
+# Get the steps by date, ignore missing values
+steps_by_date = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+
+# Load the ggplot2 library
+library(ggplot2)
+
+# Plot with ggplot
+ggplot(steps_by_date, aes(x = date, y = total_steps)) +
+  geom_bar(stat = "identity") +
+  xlab("Date") +
+  ylab("Steps") +
+  ggtitle("Total Number of Steps Taken Each Day")
+
+# mean steps taken
+mean_steps = steps_by_date[, mean(total_steps, na.rm = TRUE)]
+
+# median steps taken
+median_steps = steps_by_date[, median(total_steps, na.rm = TRUE)]
+```
+
+During the study period, after removing the missing data, the mean steps taken per
+day was **`r prettyNum(mean_steps,big.mark = ",")`** and the median steps taken per day was
+**`r prettyNum(median_steps, big.mark = ",")`**.
 
 
 ## What is the average daily activity pattern?
