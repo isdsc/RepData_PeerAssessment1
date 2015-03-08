@@ -15,3 +15,4 @@ vignettes/*.pdf
 # don't keep knitr output on development branch
 PA1_template.html
 PA1_template.md
+PA1_template_files/

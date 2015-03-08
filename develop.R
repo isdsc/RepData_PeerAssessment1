@@ -40,6 +40,57 @@ identical(bla, dt[, timestamp])
 # [1] TRUE
 
 # Concatenate date and reformatted time and convert to date/time class
-dt[, timestamp := ymd_hm(sprintf("%s %04d", date, interval))]
+dt[, interval := sub("^(..)", "\\1:", sprintf("%04d", interval))]
+dt[, timestamp := ymd_hm(paste(date, interval))]
+dt[, date := ymd(date)]
 str(dt)
+
+
+################################################################################
+# What is mean total number of steps taken per day?
+################################################################################
+
+# Get the steps by date
+steps_by_date = dt[, sum(steps), date] # This will create a column with name V1
+steps_by_date_na = dt[, list( total_steps = sum(steps) ), date]
+head(steps_by_date)
+#          date total_steps
+# 1: 2012-10-01          NA
+# 2: 2012-10-02         126
+# 3: 2012-10-03       11352
+# 4: 2012-10-04       12116
+# 5: 2012-10-05       13294
+# 6: 2012-10-06       15420
+
+steps_by_date = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+head(steps_by_date)
+#          date total_steps
+# 1: 2012-10-01           0
+# 2: 2012-10-02         126
+# 3: 2012-10-03       11352
+# 4: 2012-10-04       12116
+# 5: 2012-10-05       13294
+# 6: 2012-10-06       15420
+
+# Load ggplot2 package
+library(ggplot2)
+
+# Plot with ggplot
+# See http://docs.ggplot2.org/current/geom_histogram.html
+#   geom_histogram is an alias for geom_bar plus stat_bin
+
+ggplot(dt, aes(x = date)) + stat_bin() # Does this work because default plot is geom_bar()?
+ggplot(dt, aes(x = date)) + geom_histogram(colour="black", fill="white")
+
+# See http://docs.ggplot2.org/current/geom_bar.html for stat="identity"
+ggplot(steps_by_date, aes(x = date, y = total_steps)) + geom_bar(stat = "identity")
+
+
+# can we skip the aggregation step?
+ggplot(dt, aes(x = date, y = steps)) + geom_bar( stat = "sum")
+
+# This gives the following error:
+# Error: replacement element 8 has 62 rows, need 65
+# In addition: Warning message:
+# Removed 8 rows containing missing values (position_stack).
 
