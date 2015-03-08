@@ -70,14 +70,13 @@ and if it were a continous series during the day, we would expect the
 following:
 
 
-
 ```r
 # Number of intervals in a day
-interval_count = 24 * (60/5)
-
+intervals_per_hour = 60/5
+intervals_per_day = 24 * intervals_per_hour
 
 # Sequence of intervals for one day
-data.table(seq(from = 0, by = 5, length.out = interval_count))
+data.table(seq(from = 0, by = 5, length.out = intervals_per_day))
 ```
 
 ```
@@ -103,7 +102,7 @@ the day:
 
 ```r
 # Check out the end of the first hour
-dt[(60/5 - 1):(60/5 + 2)]
+dt[(intervals_per_hour - 1):(intervals_per_hour + 2)]
 ```
 
 ```
@@ -116,7 +115,7 @@ dt[(60/5 - 1):(60/5 + 2)]
 
 ```r
 # Check out the 24-hour boundary between the first and second day
-dt[(24*(60/5)-1):(24*(60/5)+2)]
+dt[(intervals_per_day - 1):(intervals_per_day + 2)]
 ```
 
 ```
@@ -133,6 +132,26 @@ formatted as a number: e.g. `55` is followed by `100`; `2355` is followed by
 time variable in later steps, we will transform them and keep them in a new
 Date/Time column.
 
+
+```r
+# Load lubridate package for easy handling of dates/times
+library(lubridate)
+
+# Reformat date and time and convert to date/time class
+dt[, interval := sub("^(..)", "\\1:", sprintf("%04d", interval))]
+dt[, timestamp := ymd_hm(paste(date, interval))]
+dt[, date := ymd(date)]
+str(dt)
+```
+
+```
+## Classes 'data.table' and 'data.frame':	17568 obs. of  4 variables:
+##  $ steps    : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date     : POSIXct, format: "2012-10-01" "2012-10-01" ...
+##  $ interval : chr  "00:00" "00:05" "00:10" "00:15" ...
+##  $ timestamp: POSIXct, format: "2012-10-01 00:00:00" "2012-10-01 00:05:00" ...
+##  - attr(*, ".internal.selfref")=<externalptr>
+```
 
 
 ## What is mean total number of steps taken per day?

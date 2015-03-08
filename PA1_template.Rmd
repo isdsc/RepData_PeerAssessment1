@@ -26,7 +26,7 @@ system we will use the `fread()` function from the `data.table` package. Also,
 the data loading code assumes that open source 7-Zip archive management
 software is available in the in the search path of the OS.
 
-```{r}
+```{r, message=FALSE}
 # Set the working directory and get the contents of the .zip file
 setwd("~/Coursera/Data Science Specialization/5. Reproducible Research/RepData_PeerAssessment1")
 system("7za l activity.zip")
@@ -47,13 +47,13 @@ The instructions indicate that the variable `interval` is the identifier for
 and if it were a continous series during the day, we would expect the
 following:
 
-
 ```{r}
 # Number of intervals in a day
-interval_count = 24 * (60/5)
+intervals_per_hour = 60/5
+intervals_per_day = 24 * intervals_per_hour
 
 # Sequence of intervals for one day
-data.table(seq(from = 0, by = 5, length.out = interval_count))
+data.table(seq(from = 0, by = 5, length.out = intervals_per_day))
 ```
 
 The tail end of the source dataset doesn't match this vector. In fact, it looks
@@ -63,10 +63,10 @@ the day:
 
 ```{r}
 # Check out the end of the first hour
-dt[(60/5 - 1):(60/5 + 2)]
+dt[(intervals_per_hour - 1):(intervals_per_hour + 2)]
 
 # Check out the 24-hour boundary between the first and second day
-dt[(24*(60/5)-1):(24*(60/5)+2)]
+dt[(intervals_per_day - 1):(intervals_per_day + 2)]
 ```
 
 It looks like the `interval` column is actually the time of the day, but it is
@@ -75,7 +75,7 @@ formatted as a number: e.g. `55` is followed by `100`; `2355` is followed by
 time variable in later steps, we will transform them and keep them in a new
 Date/Time column.
 
-```{r}
+```{r, message=FALSE}
 # Load lubridate package for easy handling of dates/times
 library(lubridate)
 

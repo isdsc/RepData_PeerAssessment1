@@ -101,11 +101,11 @@ str(dt)</code></pre>
 ## 17568:    NA 2012-11-30     2355</code></pre>
 <p>The instructions indicate that the variable <code>interval</code> is the identifier for 5-minute intervals. The first intervals start with the series [0, 5, 10, …], and if it were a continous series during the day, we would expect the following:</p>
 <pre class="r"><code># Number of intervals in a day
-interval_count = 24 * (60/5)
-
+intervals_per_hour = 60/5
+intervals_per_day = 24 * intervals_per_hour
 
 # Sequence of intervals for one day
-data.table(seq(from = 0, by = 5, length.out = interval_count))</code></pre>
+data.table(seq(from = 0, by = 5, length.out = intervals_per_day))</code></pre>
 <pre><code>##        V1
 ##   1:    0
 ##   2:    5
@@ -120,20 +120,34 @@ data.table(seq(from = 0, by = 5, length.out = interval_count))</code></pre>
 ## 288: 1435</code></pre>
 <p>The tail end of the source dataset doesn’t match this vector. In fact, it looks more like the time of the day in 24-hour format, but without the “:” separator. To confirm this, we can take a quick look at the end of the hour and the end of the day:</p>
 <pre class="r"><code># Check out the end of the first hour
-dt[(60/5 - 1):(60/5 + 2)]</code></pre>
+dt[(intervals_per_hour - 1):(intervals_per_hour + 2)]</code></pre>
 <pre><code>##    steps       date interval
 ## 1:    NA 2012-10-01       50
 ## 2:    NA 2012-10-01       55
 ## 3:    NA 2012-10-01      100
 ## 4:    NA 2012-10-01      105</code></pre>
 <pre class="r"><code># Check out the 24-hour boundary between the first and second day
-dt[(24*(60/5)-1):(24*(60/5)+2)]</code></pre>
+dt[(intervals_per_day - 1):(intervals_per_day + 2)]</code></pre>
 <pre><code>##    steps       date interval
 ## 1:    NA 2012-10-01     2350
 ## 2:    NA 2012-10-01     2355
 ## 3:     0 2012-10-02        0
 ## 4:     0 2012-10-02        5</code></pre>
 <p>It looks like the <code>interval</code> column is actually the time of the day, but it is formatted as a number: e.g. <code>55</code> is followed by <code>100</code>; <code>2355</code> is followed by <code>0</code>, etc. In case we need a properly formatted <code>interval</code> and a proper date and time variable in later steps, we will transform them and keep them in a new Date/Time column.</p>
+<pre class="r"><code># Load lubridate package for easy handling of dates/times
+library(lubridate)
+
+# Reformat date and time and convert to date/time class
+dt[, interval := sub(&quot;^(..)&quot;, &quot;\\1:&quot;, sprintf(&quot;%04d&quot;, interval))]
+dt[, timestamp := ymd_hm(paste(date, interval))]
+dt[, date := ymd(date)]
+str(dt)</code></pre>
+<pre><code>## Classes 'data.table' and 'data.frame':   17568 obs. of  4 variables:
+##  $ steps    : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date     : POSIXct, format: &quot;2012-10-01&quot; &quot;2012-10-01&quot; ...
+##  $ interval : chr  &quot;00:00&quot; &quot;00:05&quot; &quot;00:10&quot; &quot;00:15&quot; ...
+##  $ timestamp: POSIXct, format: &quot;2012-10-01 00:00:00&quot; &quot;2012-10-01 00:05:00&quot; ...
+##  - attr(*, &quot;.internal.selfref&quot;)=&lt;externalptr&gt;</code></pre>
 </div>
 <div id="what-is-mean-total-number-of-steps-taken-per-day" class="section level2">
 <h2>What is mean total number of steps taken per day?</h2>
