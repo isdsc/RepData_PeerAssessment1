@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
@@ -26,7 +21,8 @@ system we will use the `fread()` function from the `data.table` package. Also,
 the data loading code assumes that open source 7-Zip archive management
 software is available in the in the search path of the OS.
 
-```{r}
+
+```r
 # Set the working directory and get the contents of the .zip file
 setwd("~/Coursera/Data Science Specialization/5. Reproducible Research/RepData_PeerAssessment1")
 system("7za l activity.zip")
@@ -39,7 +35,33 @@ dt = fread("7za e -so activity.zip activity.csv 2>nul")
 
 # Take a look at the data
 str(dt)
+```
+
+```
+## Classes 'data.table' and 'data.frame':	17568 obs. of  3 variables:
+##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date    : chr  "2012-10-01" "2012-10-01" "2012-10-01" "2012-10-01" ...
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
+##  - attr(*, ".internal.selfref")=<externalptr>
+```
+
+```r
 dt
+```
+
+```
+##        steps       date interval
+##     1:    NA 2012-10-01        0
+##     2:    NA 2012-10-01        5
+##     3:    NA 2012-10-01       10
+##     4:    NA 2012-10-01       15
+##     5:    NA 2012-10-01       20
+##    ---                          
+## 17564:    NA 2012-11-30     2335
+## 17565:    NA 2012-11-30     2340
+## 17566:    NA 2012-11-30     2345
+## 17567:    NA 2012-11-30     2350
+## 17568:    NA 2012-11-30     2355
 ```
 
 The instructions indicate that the variable `interval` is the identifier for
@@ -48,12 +70,29 @@ and if it were a continous series during the day, we would expect the
 following:
 
 
-```{r}
+
+```r
 # Number of intervals in a day
 interval_count = 24 * (60/5)
 
+
 # Sequence of intervals for one day
 data.table(seq(from = 0, by = 5, length.out = interval_count))
+```
+
+```
+##        V1
+##   1:    0
+##   2:    5
+##   3:   10
+##   4:   15
+##   5:   20
+##  ---     
+## 284: 1415
+## 285: 1420
+## 286: 1425
+## 287: 1430
+## 288: 1435
 ```
 
 The tail end of the source dataset doesn't match this vector. In fact, it looks
@@ -61,12 +100,31 @@ more like the time of the day in 24-hour format, but without the ":" separator.
 To confirm this, we can take a quick look at the end of the hour and the end of
 the day:
 
-```{r}
+
+```r
 # Check out the end of the first hour
 dt[(60/5 - 1):(60/5 + 2)]
+```
 
+```
+##    steps       date interval
+## 1:    NA 2012-10-01       50
+## 2:    NA 2012-10-01       55
+## 3:    NA 2012-10-01      100
+## 4:    NA 2012-10-01      105
+```
+
+```r
 # Check out the 24-hour boundary between the first and second day
 dt[(24*(60/5)-1):(24*(60/5)+2)]
+```
+
+```
+##    steps       date interval
+## 1:    NA 2012-10-01     2350
+## 2:    NA 2012-10-01     2355
+## 3:     0 2012-10-02        0
+## 4:     0 2012-10-02        5
 ```
 
 It looks like the `interval` column is actually the time of the day, but it is
@@ -75,16 +133,6 @@ formatted as a number: e.g. `55` is followed by `100`; `2355` is followed by
 time variable in later steps, we will transform them and keep them in a new
 Date/Time column.
 
-```{r}
-# Load lubridate package for easy handling of dates/times
-library(lubridate)
-
-# Reformat date and time and convert to date/time class
-dt[, interval := sub("^(..)", "\\1:", sprintf("%04d", interval))]
-dt[, timestamp := ymd_hm(paste(date, interval))]
-dt[, date := ymd(date)]
-str(dt)
-```
 
 
 ## What is mean total number of steps taken per day?
