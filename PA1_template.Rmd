@@ -122,15 +122,20 @@ taken per day was **`r prettyNum(median_steps, big.mark = ",")`**.
 
 ## What is the average daily activity pattern?
 
-To show the daily activity pattern, we will plot the average daily steps
-taken over the duration of the study.
+To show the daily activity pattern, we will plot the average steps taken at
+each interval over the duration of the study.
 
-```{r}
+```{r, message=FALSE}
 # Average of steps taken by interval over the study period
 steps_by_interval = dt[, .(average_steps = sum(steps, na.rm = TRUE)), interval]
 
+# Info on the interval with the max average steps
+max_step_index     = steps_by_interval[, which.max(average_steps)]
+max_steps          = steps_by_interval[max_step_index, average_steps]
+max_steps_interval = steps_by_interval[max_step_index, interval]
+
 # There are too many intervals to be plotted: pick the top of the hour to label
-# the ticks marks
+# the tick marks
 labels = steps_by_interval[seq(1, length(interval), 12), interval]
 
 # For comma formatted y axis labels
@@ -146,40 +151,30 @@ activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group 
   scale_y_continuous(labels = comma) +
   theme(axis.text.x=element_text(angle=90))
 
-# Show the plot
-activity
-
-# Index of the interval with max average steps
-max_step_index = steps_by_interval[, which.max(average_steps)]
-
-# The interval with the max average steps
-max_steps          = steps_by_interval[which.max(average_steps), average_steps]
-max_steps_interval = steps_by_interval[which.max(average_steps), interval]
-```
-
-On the average, the maximum number of steps were taken at **`r max_steps_interval`**
-with **`r prettyNum(max_steps, big.mark = ",")`** steps:
-
-```{r}
-# Let's show the max steps on the plot
+# Now, add the info about the max steps to the plot and show it
 activity +
   geom_segment(
     linetype = "longdash",
     colour = "blue",
-    aes(
-      x = max_step_index, y = -Inf,
-      xend = max_step_index, yend = max_steps)
+    aes(x = max_step_index, y = -Inf, xend = max_step_index, yend = max_steps)
   ) +
   geom_text(
     x = max_step_index, y = max_steps,
     label = prettyNum(max_steps, big.mark = ","),
-    hjust=0, vjust=0) +
+    hjust=0, vjust=0
+  ) +
   geom_text(
     x = max_step_index, y = 0,
     label = max_steps_interval,
     hjust=0.25, vjust=1.25,
-    angle = 90)
+    angle = 90
+  )
 ```
+
+On the average, the maximum number of steps during a 5 minute interval were
+**`r prettyNum(max_steps, big.mark = ",")`**, taken at
+**`r max_steps_interval`**.
+
 
 
 ## Imputing missing values
