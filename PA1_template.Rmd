@@ -13,7 +13,7 @@ instructions inform us that the input data contains three columns: `steps`,
 `date`, and `interval`. Furthermore the instructions indicate that the dataset
 is stored in a comma-separated-value (CSV) file and that there are a total of
 17,568 observations in it. The input data is in the file `activity.zip`. From
-the extention, we will assume that it is in compressed format.
+the extension, we will assume that it is in compressed format.
 
 Just to make sure that our assumption is correct and to get a sense of the
 input data, we will take a quick peek at a few records from the input file.
@@ -44,7 +44,7 @@ dt
 
 The instructions indicate that the variable `interval` is the identifier for
 5-minute intervals. The first intervals start with the series [0, 5, 10, ...],
-and if it were a continous series during the day, we would expect the
+and if it were a continuous series during the day, we would expect the
 following:
 
 ```{r}
@@ -91,7 +91,7 @@ str(dt)
 
 To summarize data by group, we can use the `aggregate()` function from the base
 R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
-packages. For this assignment, we will be using `data.table` interface.
+packages. For this assignment, we will use `data.table` interface.
 
 ```{r}
 # Get the steps by date, ignore missing values
@@ -114,13 +114,72 @@ mean_steps = steps_by_date[, mean(total_steps, na.rm = TRUE)]
 median_steps = steps_by_date[, median(total_steps, na.rm = TRUE)]
 ```
 
-During the study period, after removing the missing data, the mean steps per
-day was `r prettyNum(mean_steps,big.mark = ",")` and the median steps taken was
-`r prettyNum(median_steps, big.mark = ",")`.
+During the study period, after removing the missing data, the mean steps taken
+per day was **`r prettyNum(mean_steps, big.mark = ",")`** and the median steps
+taken per day was **`r prettyNum(median_steps, big.mark = ",")`**.
+
 
 
 ## What is the average daily activity pattern?
 
+To show the daily activity pattern, we will plot the average daily steps
+taken over the duration of the study.
+
+```{r}
+# Average of steps taken by interval over the study period
+steps_by_interval = dt[, .(average_steps = sum(steps, na.rm = TRUE)), interval]
+
+# There are too many intervals to be plotted: pick the top of the hour to label
+# the ticks marks
+labels = steps_by_interval[seq(1, length(interval), 12), interval]
+
+# For comma formatted y axis labels
+require(scales)
+
+# Line graph of average activity during the day
+activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
+  geom_line() +
+  ggtitle("Average Daily Activity Pattern") +
+  xlab("Intervals") +
+  ylab("Average Steps Taken") +
+  scale_x_discrete(breaks=labels, labels=as.character(labels)) +
+  scale_y_continuous(labels = comma) +
+  theme(axis.text.x=element_text(angle=90))
+
+# Show the plot
+activity
+
+# Index of the interval with max average steps
+max_step_index = steps_by_interval[, which.max(average_steps)]
+
+# The interval with the max average steps
+max_steps          = steps_by_interval[which.max(average_steps), average_steps]
+max_steps_interval = steps_by_interval[which.max(average_steps), interval]
+```
+
+On the average, the maximum number of steps were taken at **`r max_steps_interval`**
+with **`r prettyNum(max_steps, big.mark = ",")`** steps:
+
+```{r}
+# Let's show the max steps on the plot
+activity +
+  geom_segment(
+    linetype = "longdash",
+    colour = "blue",
+    aes(
+      x = max_step_index, y = -Inf,
+      xend = max_step_index, yend = max_steps)
+  ) +
+  geom_text(
+    x = max_step_index, y = max_steps,
+    label = prettyNum(max_steps, big.mark = ","),
+    hjust=0, vjust=0) +
+  geom_text(
+    x = max_step_index, y = 0,
+    label = max_steps_interval,
+    hjust=0.25, vjust=1.25,
+    angle = 90)
+```
 
 
 ## Imputing missing values
