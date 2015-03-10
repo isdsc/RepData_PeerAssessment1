@@ -46,9 +46,9 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
 ##  Kernel  Time =     0.000 =    0% 
-##  User    Time =     0.015 =  103% 
-##  Process Time =     0.015 =  103%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
+##  User    Time =     0.000 =    0% 
+##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.019 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -279,6 +279,168 @@ On the average, the maximum number of steps during a 5 minute interval were
 
 ## Imputing missing values
 
+There are a number of cases where there are no observations for an interval or
+an entire day (coded as NA). The presence of missing data may introduce bias
+into some calculations or summaries of the data. Theollowing code chunk shows
+the number of intervals with missing data.
+
+
+```r
+# Intervals with missing values
+nrow(na.omit(dt, invert = TRUE))
+```
+
+```
+## [1] 2304
+```
+
+Note that having some intervals with missing data may have different
+implications than having entire days without data, especially if more of some
+specific days had missing data. The following section provides some comparisons.
+
+
+```r
+# Days without data
+missing_days = dt[,
+  .(
+    nmiss = nrow(na.omit(.SD, invert = TRUE)),
+    weekday = wday(date, label = TRUE, abbr = TRUE)
+  ),
+  date
+][nmiss > 0]
+
+missing_days
+```
+
+```
+##          date nmiss weekday
+## 1: 2012-10-01   288     Mon
+## 2: 2012-10-08   288     Mon
+## 3: 2012-11-01   288   Thurs
+## 4: 2012-11-04   288     Sun
+## 5: 2012-11-09   288     Fri
+## 6: 2012-11-10   288     Sat
+## 7: 2012-11-14   288     Wed
+## 8: 2012-11-30   288     Fri
+```
+
+```r
+# Percentage of days with missing data
+nrow(missing_days)/uniqueN(dt[, date])*100
+```
+
+```
+## [1] 13.11475
+```
+
+It looks like whenever there is a missing observation, an entire day's worth
+of data are missing. From the above summary, there doesn't appear to be a
+pattern to the days with missing data. One approach to imputing data for these
+missing intervals is to assign the average number of steps taken across the
+entire span of the study period.
+
+An alternative approach is to get the average of the interval for specific
+days of the week: it is likely that a person's daily activity on a weekend day
+will be more similar to another weekend day rather than a week day. We can
+extend the same logic and assume that the expected activity pattern on a
+Monday will be similar to the average of activities across all Mondays; and
+the expected activity pattern on a Tuesday will be more like the activity on
+other Tuesdays, etc.
+
+
+```r
+# Calculate average steps by interval, overall
+estimates_overall = dt[,
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  interval
+]
+setkey(estimates_overall, interval)
+
+# Calculate average steps by interval, by week day
+estimates_weekday = dt[,
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)
+]
+setkey(estimates_weekday, weekday, interval)
+
+# Review if these methods yield very different extimates
+comb = rbind(
+  estimates_overall[, weekday := "Overall"],
+  estimates_weekday
+)
+
+# See a comparison of these estimates
+ggplot(comb, aes(x = interval, y = average_steps)) +
+  facet_grid(weekday ~ .) +
+  geom_bar(stat = "identity") +
+  xlab("Intervals") +
+  ylab("Average Steps Taken") +
+  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+
+It is clear from these plots that applying day-of-week-specific averages will
+give us better estimates to impute the missing data points.
+
+
+```r
+# To compare the alternative estimation methods, create two imputed variables
+dt[is.na(steps),
+  `:=`(
+    imputed_steps_weekday = estimates_weekday[
+      .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
+      average_steps
+    ], 
+    imputed_steps_overall = estimates_overall[
+      .SD[, interval],
+      average_steps
+    ]
+  )
+]
+dt[!is.na(steps), c("imputed_steps_weekday", "imputed_steps_overall") := steps]
+
+# Summarize
+steps_by_date_new = rbind(
+  dt[, .(Method = "Original (na.rm)", total_steps = sum(steps, na.rm = TRUE)), date],
+  dt[, .(Method = "Impute-Overall",   total_steps = sum(imputed_steps_overall)), date],
+  dt[, .(Method = "Impute-Weekday",   total_steps = sum(imputed_steps_weekday)), date]
+)
+
+# Plot this, show both the original and the imputed variables
+ggplot(steps_by_date_new, aes(x = date, y = total_steps, fill = Method)) +
+  geom_bar(stat = "identity", position=position_dodge()) +
+  xlab("Date") +
+  ylab("Steps")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
+
+Now, let's review if the mean and the median were affected because we have
+imputed values for the missing data.
+
+
+
+```r
+# mean steps taken - comparison
+steps_by_date_new[, .(mean = mean(total_steps), median = median(total_steps)), Method]
+```
+
+```
+##              Method     mean   median
+## 1: Original (na.rm)  9354.23 10395.00
+## 2:   Impute-Overall 10766.19 10766.19
+## 3:   Impute-Weekday 10821.21 11015.00
+```
+
+As we can see from the above results, both the mean and the median are higher
+after the missing data were replaced with imputed values. We can also observe
+a difference between the two methods of imputing missing values: using the
+day-of-week-specific interval averages results in higher mean and median steps
+taken per day compared to the estimates based on overall interval averages:
+this is because the subject has taken fewer steps during the weekend days on
+the average compared to the week days, and there are more week days with
+missing data compared to weekend days (see the next section).
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
