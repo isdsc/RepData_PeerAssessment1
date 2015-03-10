@@ -107,6 +107,13 @@ ggplot(dt, aes(x = date, y = steps)) + geom_bar( stat = "sum")
 # In addition: Warning message:
 # Removed 8 rows containing missing values (position_stack).
 
+# mean steps taken
+steps_by_date[, mean(total_steps)]
+# [1] 9354.23
+
+# median steps taken
+steps_by_date[, median(total_steps)]
+# [1] 10395
 
 ################################################################################
 # What is the average daily activity pattern?
@@ -122,7 +129,7 @@ steps_by_interval = dt[, .( average_steps = sum(steps, na.rm = TRUE) ), interval
 l = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
   geom_line() +
   ggtitle("Average Daily Activity Pattern") +
-  xlab("5-min Intervals") +
+  xlab("Intervals") +
   ylab("Average Steps Taken")
 
 # axis.text.x=element_text(angle=90, hjust=1), 
@@ -185,3 +192,178 @@ l + geom_text(x = max_step_index, y = max_steps, label = max_steps)
 l + geom_text(x = max_step_index, y = max_steps, label = max_steps, hjust=0, vjust=0)
 
 l + geom_text(x = max_step_index, y = 0, label = max_steps_interval, hjust=0, vjust=2, angle = 90)
+
+
+################################################################################
+# Imputing missing values
+################################################################################
+# Note that there are a number of days/intervals where there are missing
+# values (coded as NA). The presence of missing days may introduce bias into
+# some calculations or summaries of the data.
+# 1. Calculate and report the total number of missing values in the dataset
+#    (i.e. the total number of rows with NAs)
+# 2. Devise a strategy for filling in all of the missing values in the
+#    dataset. The strategy does not need to be sophisticated. For example, you
+#    could use the mean/median for that day, or the mean for that 5-minute
+#    interval, etc.
+# 3. Create a new dataset that is equal to the original dataset but with the
+#    missing data filled in.
+# 4. Make a histogram of the total number of steps taken each day and
+#    Calculate and report the mean and median total number of steps taken per
+#    day. Do these values differ from the estimates from the first part of the
+#    assignment? What is the impact of imputing missing data on the estimates
+#    of the total daily number of steps?
+
+# Rows with missing values
+nrow(na.omit(dt, invert = TRUE))
+# [1] 2304
+
+# One approach to imputing is to get the average of the interval for specific
+# days of the week. E.g. a person's daily activity on a weekend day is more
+# likely to be similar to to another weekend day rather than a weekday. We can
+# extend the same logic and assume that the expected pattern on a Monday will
+# be similar to the average of activities accross Mondays.
+
+# See how many days are covered if we use a weekday-specific averages
+# (Note that from part two, we already know there are 61 unique days)
+uniqueN(dt[, date])
+
+# This gives the interval counts by week day
+dt[, .N, wday(date)]
+#    wday    N
+# 1:    2 2592
+# 2:    3 2592
+# 3:    4 2592
+# 4:    5 2592
+# 5:    6 2592
+# 6:    7 2304
+# 7:    1 2304
+
+# Get the count of observed week days
+unique(dt[, .(date)])[, .N, wday(date)]
+#    wday N
+# 1:    2 9
+# 2:    3 9
+# 3:    4 9
+# 4:    5 9
+# 5:    6 9
+# 6:    7 8
+# 7:    1 8
+
+# Average steps by interval/by week day
+estimates = dt[,
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  .(weekday = wday(date), interval)
+]
+setkey(estimates, weekday, interval)
+
+# Here, do a faceted ggplot to see how similar the patterns are by week day
+# TODO
+# TODO
+# TODO
+
+# dt outer join estimates
+estimates[dt[, .(weekday = wday(date), interval)]]
+
+# Intervals with missing data
+dt[is.na(steps), ]
+
+# This creates a new column
+dt[is.na(steps), bla := 1]
+
+# Drop the added column
+dt[, bla := NULL]
+
+dt[is.na(steps), bla := 1]
+dt[!is.na(steps), imputed := steps]
+
+# Drop the added columns
+dt[, c("bla", "imputed") := NULL]
+
+# This does it in two passes 1: estimates for NAs 2: actuals
+# Also takes care of the int v. num issue
+dt[is.na(steps), imputed := estimates[.SD[, .(weekday = wday(date), interval)], average_steps]]
+dt[!is.na(steps), imputed := steps]
+
+
+estimates[dt[, .(weekday = wday(date), interval, date, timestamp, steps)], .(imputed = if (is.na(steps)) average_steps else steps)]
+#         imputed
+#     1: 1.428571
+#     2: 0.000000
+#     3: 0.000000
+#     4: 0.000000
+#     5: 0.000000
+#    ---         
+# 17564: 0.000000
+# 17565: 0.000000
+# 17566: 0.000000
+# 17567: 0.000000
+# 17568: 1.142857
+
+imputed = estimates[dt[is.na(steps), .(weekday = wday(date), interval), nomatch = 0], .(steps = average_steps)]
+
+# Get the steps by date
+steps_by_date = dt[, .( total_steps = sum(imputed) ), date]
+
+# mean steps taken
+steps_by_date[, mean(total_steps)]
+# [1] 10821.21
+
+# median steps taken
+steps_by_date[, median(total_steps)]
+# [1] 11015
+
+
+# What would happen if we used overall average to impute the missing values?
+estimates_overall = dt[!is.na(steps), .(nobs = .N, average_steps = mean(steps)), interval]
+setkey(estimates_overall, interval)
+
+# How is the distribution of these estimates?
+ggplot(estimates_overall, aes(x = interval, y = average_steps)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+
+# How about by week day?
+estimates_overall[, weekday := 0]
+# This ifelse() doesn't work
+comb = rbind(estimates_overall, estimates)[, day := ifelse(weekday == 0, "All", wday(weekday, label = TRUE, abbr = TRUE))]
+
+# How about by week day?
+estimates_overall[, day := "All"]
+# This ifelse() doesn't work
+comb = rbind(estimates_overall, estimates[, day := wday(weekday, label = TRUE, abbr = TRUE)])
+
+ggplot(comb, aes(x = interval, y = average_steps)) +
+  facet_grid(day ~ .) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+
+
+# Combine alternatives in the same datasets
+dt[is.na(steps),
+  `:=`(
+    imputed         = TRUE,
+    imputed_overall = estimates_overall[.SD[, interval], average_steps],
+    imputed_weekday = estimates[.SD[, .(weekday = wday(date), interval)], average_steps]
+   )
+]
+dt[!is.na(steps), 
+  `:=`(
+    imputed         = FALSE,
+    imputed_overall = steps,
+    imputed_weekday = steps
+   )
+]
+
+ggplot(dt[interval == "10:25"], aes(x = date, y = steps)) + geom_bar(stat = "identity")
+
+ggplot(dt, aes(x = date, y = imputed_overall, fill = imputed)) + geom_bar(stat = "identity")
+
+ggplot(dt, aes(x = date, y = imputed_weekday, fill = imputed)) + geom_bar(stat = "identity")
+
+# Note that these latest plots don't use a pre-aggregated data table
+# In fact, if the individual intervals had different characteristics, those
+# would be captured by these plots. To illustrate:
+dt[c(20:90, 130, 150, 170, 211:212, 250:255), imputed := FALSE ]
+ggplot(dt, aes(x = date, y = imputed_weekday, fill = imputed)) + geom_bar(stat = "identity")
+dt[is.na(steps), imputed := TRUE ]
