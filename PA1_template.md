@@ -45,10 +45,10 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  ------------------- ----- ------------ ------------  ------------------------ 
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
-##  Kernel  Time =     0.000 =    0% 
+##  Kernel  Time =     0.015 =   67% 
 ##  User    Time =     0.000 =    0% 
-##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.019 =  100%    Physical Memory =      5 MB
+##  Process Time =     0.015 =   67%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.023 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -388,28 +388,57 @@ give us better estimates to impute the missing data points.
 # To compare the alternative estimation methods, create two imputed variables
 dt[is.na(steps),
   `:=`(
-    imputed_steps_weekday = estimates_weekday[
+    imputed_flag = TRUE,
+    imputed_weekday = estimates_weekday[
       .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
       average_steps
     ], 
-    imputed_steps_overall = estimates_overall[
+    imputed_overall = estimates_overall[
       .SD[, interval],
       average_steps
     ]
   )
 ]
-dt[!is.na(steps), c("imputed_steps_weekday", "imputed_steps_overall") := steps]
+dt[!is.na(steps), 
+  `:=`(
+    imputed_flag    = FALSE,
+    imputed_weekday = steps,
+    imputed_overall = steps
+  )
+]
 
-# Summarize
-steps_by_date_new = rbind(
-  dt[, .(Method = "Original (na.rm)", total_steps = sum(steps, na.rm = TRUE)), date],
-  dt[, .(Method = "Impute-Overall",   total_steps = sum(imputed_steps_overall)), date],
-  dt[, .(Method = "Impute-Weekday",   total_steps = sum(imputed_steps_weekday)), date]
+# No need to summarize, ggplot aggregates correctly
+stacked = rbind(
+  dt[, .(date, interval, Method = "1. Original", Imputed = "No", steps)],
+  dt[is.na(steps),
+    .(
+      date,
+      interval,
+      Method  = "2. Impute: Overall",
+      Imputed = "Yes",
+      steps   = estimates_overall[.SD[, interval], average_steps]
+    )
+  ],
+  dt[!is.na(steps), .(date, interval, Method = "2. Impute: Overall", Imputed = "No", steps)],
+  dt[is.na(steps),
+    .(
+      date,
+      interval,
+      Method  = "3. Impute: Weekday",
+      Imputed = "Yes",
+      steps   = estimates_weekday[
+        .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
+        average_steps
+      ]
+    )
+  ],
+  dt[!is.na(steps), .(date, interval, Method = "3. Impute: Weekday", Imputed = "No", steps)]
 )
 
 # Plot this, show both the original and the imputed variables
-ggplot(steps_by_date_new, aes(x = date, y = total_steps, fill = Method)) +
-  geom_bar(stat = "identity", position=position_dodge()) +
+ggplot(stacked, aes(x = date, y = steps, fill = Imputed)) +
+  geom_bar(stat = "identity") +
+  facet_grid(Method ~ .) +
   xlab("Date") +
   ylab("Steps")
 ```
@@ -423,24 +452,59 @@ imputed values for the missing data.
 
 ```r
 # mean steps taken - comparison
-steps_by_date_new[, .(mean = mean(total_steps), median = median(total_steps)), Method]
+stacked[,
+  .(total_steps = sum(steps, na.rm = TRUE)),
+  .(date, Method)
+][,
+  .(.N, mean = mean(total_steps), median = median(total_steps)),
+  Method
+]
 ```
 
 ```
-##              Method     mean   median
-## 1: Original (na.rm)  9354.23 10395.00
-## 2:   Impute-Overall 10766.19 10766.19
-## 3:   Impute-Weekday 10821.21 11015.00
+##                Method  N     mean   median
+## 1:        1. Original 61  9354.23 10395.00
+## 2: 2. Impute: Overall 61 10766.19 10766.19
+## 3: 3. Impute: Weekday 61 10821.21 11015.00
 ```
 
-As we can see from the above results, both the mean and the median are higher
-after the missing data were replaced with imputed values. We can also observe
-a difference between the two methods of imputing missing values: using the
+This result is somewhat unexpected: when we replace the missing values with
+the mean of the sample (i.e. `impute_overall`), the mean should not change.
+Upon further inspection, we can see that when the `sum()` function's
+`na.rm=TRUE` option is used, if all the intervals for a day have missing
+values, the `by` processing keeps the day, and the `sum()` evaluates to zero.
+If we take the means of the aggreated days, the resulting mean is lower than
+what it should be because we are including extra zeros in the calculation. To
+correct this problem, we need to omit the entire row if there is a missing
+value.
+
+
+```r
+# mean steps taken - corrected comparison
+na.omit(stacked[,
+  .(total_steps = sum(steps)),
+  .(date, Method)
+])[,
+  .(.N, mean = mean(total_steps), median = median(total_steps)),
+  Method
+]
+```
+
+```
+##                Method  N     mean   median
+## 1:        1. Original 53 10766.19 10765.00
+## 2: 2. Impute: Overall 61 10766.19 10766.19
+## 3: 3. Impute: Weekday 61 10821.21 11015.00
+```
+
+As we can see from the above results, the mean total steps per day didn't
+change for *impute method 1*. The median is slightly higher now, and it is the
+same as the mean. For *impute method 2*, both the mean and the median are
+higher after the missing data were replaced with imputed values: using the
 day-of-week-specific interval averages results in higher mean and median steps
-taken per day compared to the estimates based on overall interval averages:
-this is because the subject has taken fewer steps during the weekend days on
-the average compared to the week days, and there are more week days with
-missing data compared to weekend days (see the next section).
+taken per day because the subject has taken fewer steps during the weekend
+days on the average compared to the week days, and there are more week days
+with missing data compared to weekend days (see the next section).
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
