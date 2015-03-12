@@ -169,7 +169,7 @@ plot1 = plot_it(steps_by_date)
 steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
 plot2 = plot_it(steps_by_date_alt)
 
-# Stack the two plot on 
+# Stack the two plots
 require(grid)
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(nrow = 2, ncol = 1)))
@@ -183,9 +183,9 @@ summary(steps_by_date)
 summary(steps_by_date_alt)
 ```
 
-The results show that, using the `na.rm = TRUE` option introduces eight more
-days with total step count of zero, which moves the mean (red vertical line)
-and the median (blue vertical dashes) towards the left.
+The results show that, using the `na.rm = TRUE` option introduces eight days
+with total step count of zero, which moves the mean (red vertical line) and
+the median (blue vertical dashes) towards the left.
 
 
 
