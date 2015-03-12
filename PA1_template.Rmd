@@ -148,6 +148,46 @@ vertical line on the plot. The median steps taken per day was
 dashes.
 
 
+### A note about the `na.rm` option in `sum()`
+
+In the instructions for the above analysis, there is a specific comment about
+"ignoring the missing values in the dataset". This could mean "removing" them
+from the analysis as in `sum(..., na.rm = TRUE)`, or it could mean doing
+nothing about them, i.e. use `sum(...)` which is the same as `sum(..., na.rm =
+FALSE)`. In the distribution example above, we used the `sum()` function
+twice, and only in one of them we used the option `na.rm = TRUE`. This was an
+important feature of the analysis, because doing it differently would yield a
+very diffent result. In this section, we will repeat the analysis using the
+alternative approach and illustrate how it is different from the correct
+approach.
+
+```{r, message=FALSE}
+# Original approach
+plot1 = plot_it(steps_by_date)
+
+# Alternative approach
+steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+plot2 = plot_it(steps_by_date_alt)
+
+# Stack the two plot on 
+require(grid)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 2, ncol = 1)))
+print(plot1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(plot2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+
+# Summary stats for the original approach
+summary(steps_by_date)
+
+# Summary stats for the alternative approach
+summary(steps_by_date_alt)
+```
+
+The results show that, using the `na.rm = TRUE` option introduces eight more
+days with total step count of zero, which moves the mean (red vertical line)
+and the median (blue vertical dashes) towards the left.
+
+
 
 What is the average daily activity pattern?
 --------------------------------------------------------------------------------
