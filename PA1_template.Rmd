@@ -1,12 +1,14 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
+output:
   html_document:
     keep_md: true
 ---
 
 
-## Loading and preprocessing the data
+
+Loading and preprocessing the data
+--------------------------------------------------------------------------------
 
 Before analyzing the data, we need to load the data into R. The assignment
 instructions inform us that the input data contains three columns: `steps`,
@@ -87,7 +89,9 @@ str(dt)
 ```
 
 
-## What is mean total number of steps taken per day?
+
+What is mean total number of steps taken per day?
+--------------------------------------------------------------------------------
 
 To summarize data by group, we can use the `aggregate()` function from the base
 R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
@@ -143,7 +147,10 @@ vertical line on the plot. The median steps taken per day was
 **`r prettyNum(stats$median, big.mark = ",")`**, shown with blue vertical
 dashes.
 
-## What is the average daily activity pattern?
+
+
+What is the average daily activity pattern?
+--------------------------------------------------------------------------------
 
 To show the daily activity pattern, we will plot the average steps taken at
 each interval over the duration of the study.
@@ -197,7 +204,8 @@ On the average, the maximum number of steps during a 5 minute interval were
 
 
 
-## Imputing missing values
+Imputing missing values
+--------------------------------------------------------------------------------
 
 There are a number of cases where there are no observations for an interval or
 an entire day (coded as NA). The presence of missing data may introduce bias
@@ -381,4 +389,6 @@ days on the average compared to the week days, and there are more week days
 with missing data compared to weekend days (see the next section).
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+Are there differences in activity patterns between weekdays and weekends?
+--------------------------------------------------------------------------------
