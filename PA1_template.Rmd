@@ -6,7 +6,9 @@ output:
 ---
 
 
-## Loading and preprocessing the data
+
+Loading and preprocessing the data
+--------------------------------------------------------------------------------
 
 Before analyzing the data, we need to load the data into R. The assignment
 instructions inform us that the input data contains three columns: `steps`,
@@ -87,7 +89,9 @@ str(dt)
 ```
 
 
-## What is mean total number of steps taken per day?
+
+What is mean total number of steps taken per day?
+--------------------------------------------------------------------------------
 
 To summarize data by group, we can use the `aggregate()` function from the base
 R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
@@ -114,14 +118,14 @@ require(scales)
 # Create a function to plot the data with ggplot
 plot_it = function(dt_to_plot) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
-    geom_histogram(colour="black", fill="white") +
-    ggtitle("Distribution of Total Steps per Day") +
-    xlab("Total Steps in a Day") +
-    ylab("Number of Days") +
-    scale_x_continuous(labels = comma) +
-    geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
-    geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
-    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue", linetype="dashed", size=1)
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( "Distribution of Total Steps per Day") +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
 }
 
 plot_it(steps_by_date)
@@ -163,30 +167,34 @@ labels = steps_by_interval[seq(1, length(interval), 12), interval]
 
 # Line graph of average activity during the day
 activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
-  geom_line() +
-  ggtitle("Average Daily Activity Pattern") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) +
-  scale_y_continuous(labels = comma) +
-  theme(axis.text.x=element_text(angle=90))
+  geom_line          ( ) +
+  ggtitle            ( "Average Daily Activity Pattern") +
+  xlab               ( "Intervals") +
+  ylab               ( "Average Steps Taken") +
+  scale_x_discrete   ( breaks=labels, labels=as.character  ( labels)) +
+  scale_y_continuous ( labels = comma) +
+  theme              ( axis.text.x=element_text            ( angle=90))
 
 # Now, add the info about the max steps to the plot and show it
 activity +
   geom_segment(
     linetype = "longdash",
-    colour = "blue",
+    colour   = "blue",
     aes(x = max_step_index, y = -Inf, xend = max_step_index, yend = max_steps)
   ) +
   geom_text(
-    x = max_step_index, y = max_steps,
+    x     = max_step_index,
+    y     = max_steps,
     label = prettyNum(max_steps, big.mark = ","),
-    hjust=0, vjust=0
+    hjust = 0,
+    vjust = 0
   ) +
   geom_text(
-    x = max_step_index, y = 0,
+    x     = max_step_index,
+    y     = 0,
     label = max_steps_interval,
-    hjust=0.25, vjust=1.25,
+    hjust = 0.25,
+    vjust = 1.25,
     angle = 90
   )
 ```
@@ -197,11 +205,12 @@ On the average, the maximum number of steps during a 5 minute interval were
 
 
 
-## Imputing missing values
+Imputing missing values
+--------------------------------------------------------------------------------
 
 There are a number of cases where there are no observations for an interval or
 an entire day (coded as NA). The presence of missing data may introduce bias
-into some calculations or summaries of the data. Theollowing code chunk shows
+into some calculations or summaries of the data. The following code chunk shows
 the number of intervals with missing data.
 
 ```{r}
@@ -217,7 +226,7 @@ specific days had missing data. The following section provides some comparisons.
 # Days without data
 missing_days = dt[,
   .(
-    nmiss = nrow(na.omit(.SD, invert = TRUE)),
+    nmiss   = nrow(na.omit(.SD, invert = TRUE)),
     weekday = wday(date, label = TRUE, abbr = TRUE)
   ),
   date
@@ -266,11 +275,11 @@ comb = rbind(
 
 # See a comparison of these estimates
 ggplot(comb, aes(x = interval, y = average_steps)) +
-  facet_grid(weekday ~ .) +
-  geom_bar(stat = "identity") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+  facet_grid       ( weekday ~ .) +
+  geom_bar         ( stat = "identity") +
+  xlab             ( "Intervals") +
+  ylab             ( "Average Steps Taken") +
+  scale_x_discrete ( breaks = labels, labels = as.character(labels)) + theme(axis.text.x = element_text(angle = 90))
 ```
 
 It is clear from these plots that applying day-of-week-specific averages will
@@ -381,4 +390,6 @@ days on the average compared to the week days, and there are more week days
 with missing data compared to weekend days (see the next section).
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+Are there differences in activity patterns between weekdays and weekends?
+--------------------------------------------------------------------------------
