@@ -1,7 +1,9 @@
 # Reproducible Research: Peer Assessment 1
 
 
-## Loading and preprocessing the data
+
+Loading and preprocessing the data
+--------------------------------------------------------------------------------
 
 Before analyzing the data, we need to load the data into R. The assignment
 instructions inform us that the input data contains three columns: `steps`,
@@ -48,7 +50,7 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  Kernel  Time =     0.000 =    0% 
 ##  User    Time =     0.000 =    0% 
 ##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
+##  Global  Time =     0.017 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -179,7 +181,9 @@ str(dt)
 ```
 
 
-## What is mean total number of steps taken per day?
+
+What is mean total number of steps taken per day?
+--------------------------------------------------------------------------------
 
 To summarize data by group, we can use the `aggregate()` function from the base
 R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
@@ -207,14 +211,14 @@ require(scales)
 # Create a function to plot the data with ggplot
 plot_it = function(dt_to_plot) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
-    geom_histogram(colour="black", fill="white") +
-    ggtitle("Distribution of Total Steps per Day") +
-    xlab("Total Steps in a Day") +
-    ylab("Number of Days") +
-    scale_x_continuous(labels = comma) +
-    geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
-    geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
-    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue", linetype="dashed", size=1)
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( "Distribution of Total Steps per Day") +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
 }
 
 plot_it(steps_by_date)
@@ -249,7 +253,85 @@ vertical line on the plot. The median steps taken per day was
 **10,765**, shown with blue vertical
 dashes.
 
-## What is the average daily activity pattern?
+
+### A note about the `na.rm` option in `sum()`
+
+In the instructions for the above analysis, there is a specific comment about
+"ignoring the missing values in the dataset". This could mean "removing" them
+from the analysis as in `sum(..., na.rm = TRUE)`, or it could mean doing
+nothing about them, i.e. use `sum(...)` which is the same as `sum(..., na.rm =
+FALSE)`. In the distribution example above, we used the `sum()` function
+twice, and only in one of them we used the option `na.rm = TRUE`. This was an
+important feature of the analysis, because doing it differently would yield a
+very diffent result. In this section, we will repeat the analysis using the
+alternative approach and illustrate how it is different from the correct
+approach.
+
+
+```r
+# Original approach
+plot1 = plot_it(steps_by_date)
+
+# Alternative approach
+steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+plot2 = plot_it(steps_by_date_alt)
+
+# Stack the two plots
+require(grid)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 2, ncol = 1)))
+print(plot1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+```
+
+```
+## Warning: Removed 8 rows containing non-finite values (stat_density).
+```
+
+```r
+print(plot2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
+
+```r
+# Summary stats for the original approach
+summary(steps_by_date)
+```
+
+```
+##       date             total_steps   
+##  Min.   :2012-10-01   Min.   :   41  
+##  1st Qu.:2012-10-16   1st Qu.: 8841  
+##  Median :2012-10-31   Median :10765  
+##  Mean   :2012-10-31   Mean   :10766  
+##  3rd Qu.:2012-11-15   3rd Qu.:13294  
+##  Max.   :2012-11-30   Max.   :21194  
+##                       NA's   :8
+```
+
+```r
+# Summary stats for the alternative approach
+summary(steps_by_date_alt)
+```
+
+```
+##       date             total_steps   
+##  Min.   :2012-10-01   Min.   :    0  
+##  1st Qu.:2012-10-16   1st Qu.: 6778  
+##  Median :2012-10-31   Median :10395  
+##  Mean   :2012-10-31   Mean   : 9354  
+##  3rd Qu.:2012-11-15   3rd Qu.:12811  
+##  Max.   :2012-11-30   Max.   :21194
+```
+
+The results show that, using the `na.rm = TRUE` option introduces eight days
+with total step count of zero, which moves the mean (red vertical line) and
+the median (blue vertical dashes) towards the left.
+
+
+
+What is the average daily activity pattern?
+--------------------------------------------------------------------------------
 
 To show the daily activity pattern, we will plot the average steps taken at
 each interval over the duration of the study.
@@ -270,35 +352,39 @@ labels = steps_by_interval[seq(1, length(interval), 12), interval]
 
 # Line graph of average activity during the day
 activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
-  geom_line() +
-  ggtitle("Average Daily Activity Pattern") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) +
-  scale_y_continuous(labels = comma) +
-  theme(axis.text.x=element_text(angle=90))
+  geom_line          ( ) +
+  ggtitle            ( "Average Daily Activity Pattern") +
+  xlab               ( "Intervals") +
+  ylab               ( "Average Steps Taken") +
+  scale_x_discrete   ( breaks=labels, labels=as.character  ( labels)) +
+  scale_y_continuous ( labels = comma) +
+  theme              ( axis.text.x=element_text            ( angle=90))
 
 # Now, add the info about the max steps to the plot and show it
 activity +
   geom_segment(
     linetype = "longdash",
-    colour = "blue",
+    colour   = "blue",
     aes(x = max_step_index, y = -Inf, xend = max_step_index, yend = max_steps)
   ) +
   geom_text(
-    x = max_step_index, y = max_steps,
+    x     = max_step_index,
+    y     = max_steps,
     label = prettyNum(max_steps, big.mark = ","),
-    hjust=0, vjust=0
+    hjust = 0,
+    vjust = 0
   ) +
   geom_text(
-    x = max_step_index, y = 0,
+    x     = max_step_index,
+    y     = 0,
     label = max_steps_interval,
-    hjust=0.25, vjust=1.25,
+    hjust = 0.25,
+    vjust = 1.25,
     angle = 90
   )
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
 
 On the average, the maximum number of steps during a 5 minute interval were
 **10,927**, taken at
@@ -306,11 +392,12 @@ On the average, the maximum number of steps during a 5 minute interval were
 
 
 
-## Imputing missing values
+Imputing missing values
+--------------------------------------------------------------------------------
 
 There are a number of cases where there are no observations for an interval or
 an entire day (coded as NA). The presence of missing data may introduce bias
-into some calculations or summaries of the data. Theollowing code chunk shows
+into some calculations or summaries of the data. The following code chunk shows
 the number of intervals with missing data.
 
 
@@ -332,7 +419,7 @@ specific days had missing data. The following section provides some comparisons.
 # Days without data
 missing_days = dt[,
   .(
-    nmiss = nrow(na.omit(.SD, invert = TRUE)),
+    nmiss   = nrow(na.omit(.SD, invert = TRUE)),
     weekday = wday(date, label = TRUE, abbr = TRUE)
   ),
   date
@@ -400,14 +487,14 @@ comb = rbind(
 
 # See a comparison of these estimates
 ggplot(comb, aes(x = interval, y = average_steps)) +
-  facet_grid(weekday ~ .) +
-  geom_bar(stat = "identity") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+  facet_grid       ( weekday ~ .) +
+  geom_bar         ( stat = "identity") +
+  xlab             ( "Intervals") +
+  ylab             ( "Average Steps Taken") +
+  scale_x_discrete ( breaks = labels, labels = as.character(labels)) + theme(axis.text.x = element_text(angle = 90))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
 
 It is clear from these plots that applying day-of-week-specific averages will
 give us better estimates to impute the missing data points.
@@ -472,7 +559,7 @@ ggplot(stacked, aes(x = date, y = steps, fill = Imputed)) +
   ylab("Steps")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
 Now, let's review if the mean and the median were affected because we have
 imputed values for the missing data.
@@ -536,4 +623,6 @@ days on the average compared to the week days, and there are more week days
 with missing data compared to weekend days (see the next section).
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+Are there differences in activity patterns between weekdays and weekends?
+--------------------------------------------------------------------------------
