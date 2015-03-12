@@ -115,6 +115,132 @@ steps_by_date[, mean(total_steps)]
 steps_by_date[, median(total_steps)]
 # [1] 10395
 
+# revisit na.rm: by removing these, we keep the dates without data, and the sum
+# of steps on thosedays become zero. When we take the average again, those zeros
+# bring down the average. This would be very clear if our "histogram" was
+# properly constructed. Now, let's move to the correct histogram, and revisit
+# the difference between na.rm or not for the daily totals.
+
+# In retrospect, this question is asking about the distribution of the mean
+# steps taken during a typical day. The comment about the bar plot vs
+# histogram in the question is also an evidence of this. Now, take a look at
+# the distribution (no need to reinvent the wheel):
+summary(steps_by_date)
+
+
+# The histogram to show the disribution of these days will have the days as the
+# x axis and the y axis will be count (as is in a true histogram) of days at
+# that level of activity.
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram()
+ggplot(steps_by_date, aes(x = total_steps)) + stat_bin()
+ggplot(steps_by_date, aes(x = total_steps)) + geom_density()
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram()                   + geom_density()
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram(aes(y=..density..)) + geom_density()
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram()                   + geom_density(aes(y=..scaled..))
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram(aes(y=..ncount..))  + geom_density(aes(y=..scaled..))
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram()                   + geom_density(aes(y=..scaled..*4))
+
+# Add the mean line
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram() + geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)))
+
+require(scales) # for removing scientific notation
+
+plot_it = function(dt_to_plot) { 
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram(colour="black", fill="white") +
+    ggtitle("Distribution of Total Steps per Day") +
+    xlab("Total Steps in a Day") +
+    ylab("Number of Days") +
+    scale_x_continuous(labels = comma) +
+    geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
+    geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
+    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue",linetype="dashed", size=1)
+}
+
+# This makes it very clear that na.rm at the daily total level is wrong!
+plot_it(dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date])
+
+# Go back to using steps_by_date_na
+steps_by_date = dt[, list( total_steps = sum(steps) ), date]
+
+plot_it(steps_by_date)
+
+# Stack them up
+p1 <- plot_it(dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date])
+p2 <- plot_it(dt[, .( total_steps = sum(steps) ), date])
+
+require(grid)
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 2, ncol = 1)))
+print(p1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+
+summary(steps_by_date)
+
+# Get the mean and median for the text, now we have to use na.rm
+stats = steps_by_date[,
+  .(
+    mean   = mean(total_steps, na.rm = TRUE),
+    median = median(total_steps, na.rm = TRUE)
+  )
+]
+stats
+#        mean median
+# 1: 10766.19  10765
+
+# Can we access the stats from within summary()?
+stats = summary(steps_by_date)
+stats
+ #      date             total_steps   
+ # Min.   :2012-10-01   Min.   :   41  
+ # 1st Qu.:2012-10-16   1st Qu.: 8841  
+ # Median :2012-10-31   Median :10765  
+ # Mean   :2012-10-31   Mean   :10766  
+ # 3rd Qu.:2012-11-15   3rd Qu.:13294  
+ # Max.   :2012-11-30   Max.   :21194  
+ #                      NA's   :8
+
+class(stats)
+# [1] "table"
+
+str(stats)
+#  'table' chr [1:7, 1:2] "Min.   :2012-10-01  " "1st Qu.:2012-10-16  " "Median :2012-10-31  " "Mean   :2012-10-31  " ...
+#  - attr(*, "dimnames")=List of 2
+#   ..$ : chr [1:7] "" "" "" "" ...
+#   ..$ : chr [1:2] "     date" " total_steps"
+
+names(attributes(stats))
+# [1] "dim"      "dimnames" "class"
+
+attributes(stats)
+# $dim
+# [1] 7 2
+
+# $dimnames
+# $dimnames[[1]]
+# [1] "" "" "" "" "" ""
+
+# $dimnames[[2]]
+# [1] "     date"    " total_steps"
+
+# $class
+# [1] "table"
+
+unclass(stats)
+#       date               total_steps     
+#  "Min.   :2012-10-01  " "Min.   :   41  "
+#  "1st Qu.:2012-10-16  " "1st Qu.: 8841  "
+#  "Median :2012-10-31  " "Median :10765  "
+#  "Mean   :2012-10-31  " "Mean   :10766  "
+#  "3rd Qu.:2012-11-15  " "3rd Qu.:13294  "
+#  "Max.   :2012-11-30  " "Max.   :21194  "
+#  NA                     "NA's   :8  "
+
+names(unclass(stats))
+# NULL
+
+
 ################################################################################
 # What is the average daily activity pattern?
 ################################################################################
@@ -140,7 +266,6 @@ l + theme(
   panel.grid.major.x = element_blank()
 )
 
-require(scales) # for removing scientific notation
 l + scale_y_continuous(labels = comma)
 
 # manually generate breaks/labels
