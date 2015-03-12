@@ -94,9 +94,8 @@ R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
 packages. For this assignment, we will use `data.table` interface.
 
 This section will try to analyze the distribution of the total number of steps
-taken per day throughout the study period. using a histogram, then provide the
-mean and the median of this metric which will provide a more formal description
-of its distribution.
+taken per day throughout the study period using a histogram, then provide the
+mean and the median of this metric as formal descriptors of its distribution.
 
 
 ```{r, message=FALSE}
@@ -113,7 +112,7 @@ library(ggplot2)
 require(scales)
 
 # Create a function to plot the data with ggplot
-plot_it = function(dt_to_plot) { 
+plot_it = function(dt_to_plot) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
     geom_histogram(colour="black", fill="white") +
     ggtitle("Distribution of Total Steps per Day") +
@@ -122,7 +121,7 @@ plot_it = function(dt_to_plot) {
     scale_x_continuous(labels = comma) +
     geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
     geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
-    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue",linetype="dashed", size=1)
+    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue", linetype="dashed", size=1)
 }
 
 plot_it(steps_by_date)
@@ -140,7 +139,7 @@ stats
 
 During the study period, after removing the missing data, the mean steps taken
 per day was **`r prettyNum(stats$mean, big.mark = ",")`**, shown as a red
-vertical line on the plot. The median steps taken per day was 
+vertical line on the plot. The median steps taken per day was
 **`r prettyNum(stats$median, big.mark = ",")`**, shown with blue vertical
 dashes.
 
@@ -202,7 +201,7 @@ On the average, the maximum number of steps during a 5 minute interval were
 
 There are a number of cases where there are no observations for an interval or
 an entire day (coded as NA). The presence of missing data may introduce bias
-into some calculations or summaries of the data. Theollowing code chunk shows
+into some calculations or summaries of the data. The following code chunk shows
 the number of intervals with missing data.
 
 ```{r}
@@ -285,14 +284,14 @@ dt[is.na(steps),
     imputed_weekday = estimates_weekday[
       .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
       average_steps
-    ], 
+    ],
     imputed_overall = estimates_overall[
       .SD[, interval],
       average_steps
     ]
   )
 ]
-dt[!is.na(steps), 
+dt[!is.na(steps),
   `:=`(
     imputed_flag    = FALSE,
     imputed_weekday = steps,
