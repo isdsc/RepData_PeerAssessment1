@@ -118,14 +118,14 @@ require(scales)
 # Create a function to plot the data with ggplot
 plot_it = function(dt_to_plot) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
-    geom_histogram(colour="black", fill="white") +
-    ggtitle("Distribution of Total Steps per Day") +
-    xlab("Total Steps in a Day") +
-    ylab("Number of Days") +
-    scale_x_continuous(labels = comma) +
-    geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
-    geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
-    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue", linetype="dashed", size=1)
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( "Distribution of Total Steps per Day") +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
 }
 
 plot_it(steps_by_date)
@@ -170,30 +170,34 @@ labels = steps_by_interval[seq(1, length(interval), 12), interval]
 
 # Line graph of average activity during the day
 activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
-  geom_line() +
-  ggtitle("Average Daily Activity Pattern") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) +
-  scale_y_continuous(labels = comma) +
-  theme(axis.text.x=element_text(angle=90))
+  geom_line          ( ) +
+  ggtitle            ( "Average Daily Activity Pattern") +
+  xlab               ( "Intervals") +
+  ylab               ( "Average Steps Taken") +
+  scale_x_discrete   ( breaks=labels, labels=as.character  ( labels)) +
+  scale_y_continuous ( labels = comma) +
+  theme              ( axis.text.x=element_text            ( angle=90))
 
 # Now, add the info about the max steps to the plot and show it
 activity +
   geom_segment(
     linetype = "longdash",
-    colour = "blue",
+    colour   = "blue",
     aes(x = max_step_index, y = -Inf, xend = max_step_index, yend = max_steps)
   ) +
   geom_text(
-    x = max_step_index, y = max_steps,
+    x     = max_step_index,
+    y     = max_steps,
     label = prettyNum(max_steps, big.mark = ","),
-    hjust=0, vjust=0
+    hjust = 0,
+    vjust = 0
   ) +
   geom_text(
-    x = max_step_index, y = 0,
+    x     = max_step_index,
+    y     = 0,
     label = max_steps_interval,
-    hjust=0.25, vjust=1.25,
+    hjust = 0.25,
+    vjust = 1.25,
     angle = 90
   )
 ```
@@ -225,7 +229,7 @@ specific days had missing data. The following section provides some comparisons.
 # Days without data
 missing_days = dt[,
   .(
-    nmiss = nrow(na.omit(.SD, invert = TRUE)),
+    nmiss   = nrow(na.omit(.SD, invert = TRUE)),
     weekday = wday(date, label = TRUE, abbr = TRUE)
   ),
   date
@@ -274,11 +278,11 @@ comb = rbind(
 
 # See a comparison of these estimates
 ggplot(comb, aes(x = interval, y = average_steps)) +
-  facet_grid(weekday ~ .) +
-  geom_bar(stat = "identity") +
-  xlab("Intervals") +
-  ylab("Average Steps Taken") +
-  scale_x_discrete(breaks=labels, labels=as.character(labels)) + theme(axis.text.x=element_text(angle=90))
+  facet_grid       ( weekday ~ .) +
+  geom_bar         ( stat = "identity") +
+  xlab             ( "Intervals") +
+  ylab             ( "Average Steps Taken") +
+  scale_x_discrete ( breaks = labels, labels = as.character(labels)) + theme(axis.text.x = element_text(angle = 90))
 ```
 
 It is clear from these plots that applying day-of-week-specific averages will
