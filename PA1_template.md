@@ -45,10 +45,10 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  ------------------- ----- ------------ ------------  ------------------------ 
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
-##  Kernel  Time =     0.015 =   67% 
+##  Kernel  Time =     0.000 =    0% 
 ##  User    Time =     0.000 =    0% 
-##  Process Time =     0.015 =   67%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.023 =  100%    Physical Memory =      5 MB
+##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -185,37 +185,69 @@ To summarize data by group, we can use the `aggregate()` function from the base
 R system, or utilize the modern interfaces provided in `data.table` or `dplyr`
 packages. For this assignment, we will use `data.table` interface.
 
+This section will try to analyze the distribution of the total number of steps
+taken per day throughout the study period using a histogram, then provide the
+mean and the median of this metric as formal descriptors of its distribution.
+
+
 
 ```r
-# Get the steps by date, ignore missing values
-steps_by_date = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
+# Get the steps by date, but don't remove NAs: this will make sure that if all
+# the intervals in a day have NAs, the day's total steps will also be NA.
+# If we remove them, the sum for the day will be zero and the daily average of
+# the total steps will be incorrectly underestimated.
+steps_by_date = dt[, .( total_steps = sum(steps) ), date]
 
 # Load the ggplot2 library
 library(ggplot2)
 
-# Plot with ggplot
-ggplot(steps_by_date, aes(x = date, y = total_steps)) +
-  geom_bar(stat = "identity") +
-  xlab("Date") +
-  ylab("Steps") +
-  ggtitle("Total Number of Steps Taken Each Day")
+# For comma formatted axis labels
+require(scales)
+
+# Create a function to plot the data with ggplot
+plot_it = function(dt_to_plot) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram(colour="black", fill="white") +
+    ggtitle("Distribution of Total Steps per Day") +
+    xlab("Total Steps in a Day") +
+    ylab("Number of Days") +
+    scale_x_continuous(labels = comma) +
+    geom_density(aes(y=..scaled..*4.35), alpha=0.2, fill="#FF6666") +
+    geom_vline(aes(xintercept=mean(total_steps, na.rm=TRUE)), color="red", size=1) +
+    geom_vline(aes(xintercept=median(total_steps, na.rm=TRUE)), color="blue", linetype="dashed", size=1)
+}
+
+plot_it(steps_by_date)
+```
+
+```
+## Warning: Removed 8 rows containing non-finite values (stat_density).
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
 
 ```r
-# mean steps taken
-mean_steps = steps_by_date[, mean(total_steps, na.rm = TRUE)]
+# Get the mean and median: now we have to use na.rm to remove days with NAs
+stats = steps_by_date[,
+  .(
+    mean   = mean(total_steps, na.rm = TRUE),
+    median = median(total_steps, na.rm = TRUE)
+  )
+]
 
-# median steps taken
-median_steps = steps_by_date[, median(total_steps, na.rm = TRUE)]
+stats
+```
+
+```
+##        mean median
+## 1: 10766.19  10765
 ```
 
 During the study period, after removing the missing data, the mean steps taken
-per day was **9,354.23** and the median steps
-taken per day was **10,395**.
-
-
+per day was **10,766.19**, shown as a red
+vertical line on the plot. The median steps taken per day was
+**10,765**, shown with blue vertical
+dashes.
 
 ## What is the average daily activity pattern?
 
@@ -235,9 +267,6 @@ max_steps_interval = steps_by_interval[max_step_index, interval]
 # There are too many intervals to be plotted: pick the top of the hour to label
 # the tick marks
 labels = steps_by_interval[seq(1, length(interval), 12), interval]
-
-# For comma formatted y axis labels
-require(scales)
 
 # Line graph of average activity during the day
 activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group = 1)) +
@@ -392,14 +421,14 @@ dt[is.na(steps),
     imputed_weekday = estimates_weekday[
       .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
       average_steps
-    ], 
+    ],
     imputed_overall = estimates_overall[
       .SD[, interval],
       average_steps
     ]
   )
 ]
-dt[!is.na(steps), 
+dt[!is.na(steps),
   `:=`(
     imputed_flag    = FALSE,
     imputed_weekday = steps,
