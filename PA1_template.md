@@ -48,8 +48,8 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
 ##  Kernel  Time =     0.000 =    0% 
-##  User    Time =     0.015 =   99% 
-##  Process Time =     0.015 =   99%    Virtual  Memory =      3 MB 
+##  User    Time =     0.000 =    0% 
+##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
 ##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
 ```
 
@@ -165,9 +165,9 @@ Date/Time column.
 library(lubridate)
 
 # Reformat date and time and convert to date/time class
-dt[, interval := sub("^(..)", "\\1:", sprintf("%04d", interval))]
+dt[, interval  := sub("^(..)", "\\1:", sprintf("%04d", interval))]
 dt[, timestamp := ymd_hm(paste(date, interval))]
-dt[, date := ymd(date)]
+dt[, date      := ymd(date)]
 str(dt)
 ```
 
@@ -209,19 +209,21 @@ library(ggplot2)
 require(scales)
 
 # Create a function to plot the data with ggplot
-plot_it = function(dt_to_plot, plot_title) {
+plot_it = function(dt_to_plot, scale, plot_title) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
     geom_histogram     ( colour = "black", fill = "white") +
     ggtitle            ( plot_title ) +
     xlab               ( "Total Steps in a Day") +
     ylab               ( "Number of Days") +
     scale_x_continuous ( labels = comma) +
-    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
-    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
-    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
+                         color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
+                         color = "blue", linetype = "dashed", size = 1)
 }
 
-plot_it(steps_by_date, "Distribution of Total Steps per Day")
+plot_it(steps_by_date, "..scaled..*4.35", "Distribution of Total Steps per Day")
 ```
 
 ```
@@ -263,18 +265,18 @@ nothing about them, i.e. use `sum(...)` which is the same as `sum(..., na.rm =
 FALSE)`. In the distribution example above, we used the `sum()` function
 twice, and only in one of them we used the option `na.rm = TRUE`. This was an
 important feature of the analysis, because doing it differently would yield a
-very diffent result. In this section, we will repeat the analysis using the
+very different result. In this section, we will repeat the analysis using the
 alternative approach and illustrate how it is different from the correct
 approach.
 
 
 ```r
 # Original approach
-plot1 = plot_it(steps_by_date, "Original")
+plot1 = plot_it(steps_by_date, "..scaled..*4.35", "Original")
 
 # Alternative approach
 steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
-plot2 = plot_it(steps_by_date_alt, "Initial `sum()` with `na.rm = TRUE` Option")
+plot2 = plot_it(steps_by_date_alt, "..scaled..*4", "Initial `sum()` with `na.rm = TRUE` Option")
 
 # Stack the two plots
 require(grid)
@@ -420,7 +422,7 @@ specific days had missing data. The following section provides some comparisons.
 missing_days = dt[,
   .(
     nmiss   = nrow(na.omit(.SD, invert = TRUE)),
-    weekday = wday(date, label = TRUE, abbr = TRUE)
+    dow = wday(date, label = TRUE, abbr = TRUE)
   ),
   date
 ][nmiss > 0]
@@ -429,15 +431,15 @@ missing_days
 ```
 
 ```
-##          date nmiss weekday
-## 1: 2012-10-01   288     Mon
-## 2: 2012-10-08   288     Mon
-## 3: 2012-11-01   288   Thurs
-## 4: 2012-11-04   288     Sun
-## 5: 2012-11-09   288     Fri
-## 6: 2012-11-10   288     Sat
-## 7: 2012-11-14   288     Wed
-## 8: 2012-11-30   288     Fri
+##          date nmiss   dow
+## 1: 2012-10-01   288   Mon
+## 2: 2012-10-08   288   Mon
+## 3: 2012-11-01   288 Thurs
+## 4: 2012-11-04   288   Sun
+## 5: 2012-11-09   288   Fri
+## 6: 2012-11-10   288   Sat
+## 7: 2012-11-14   288   Wed
+## 8: 2012-11-30   288   Fri
 ```
 
 ```r
@@ -473,21 +475,21 @@ estimates_overall = dt[,
 setkey(estimates_overall, interval)
 
 # Calculate average steps by interval, by week day
-estimates_weekday = dt[,
+estimates_dow = dt[,
   .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
-  .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)
+  .(dow  = wday(date, label = TRUE, abbr = TRUE), interval)
 ]
-setkey(estimates_weekday, weekday, interval)
+setkey(estimates_dow, dow, interval)
 
 # Review if these methods yield very different extimates
 comb = rbind(
-  estimates_overall[, weekday := "Overall"],
-  estimates_weekday
+  estimates_overall[, dow := "Overall"],
+  estimates_dow
 )
 
 # See a comparison of these estimates
 ggplot(comb, aes(x = interval, y = average_steps)) +
-  facet_grid       ( weekday ~ .) +
+  facet_grid       ( dow ~ .) +
   geom_bar         ( stat = "identity") +
   xlab             ( "Intervals") +
   ylab             ( "Average Steps Taken") +
@@ -506,8 +508,8 @@ give us better estimates to impute the missing data points.
 dt[is.na(steps),
   `:=`(
     imputed_flag = TRUE,
-    imputed_weekday = estimates_weekday[
-      .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
+    imputed_dow = estimates_dow[
+      .SD[, .(dow = wday(date, label = TRUE, abbr = TRUE), interval)],
       average_steps
     ],
     imputed_overall = estimates_overall[
@@ -519,7 +521,7 @@ dt[is.na(steps),
 dt[!is.na(steps),
   `:=`(
     imputed_flag    = FALSE,
-    imputed_weekday = steps,
+    imputed_dow = steps,
     imputed_overall = steps
   )
 ]
@@ -541,15 +543,15 @@ stacked = rbind(
     .(
       date,
       interval,
-      Method  = "3. Impute: Weekday",
+      Method  = "3. Impute: DOW",
       Imputed = "Yes",
-      steps   = estimates_weekday[
-        .SD[, .(weekday = wday(date, label = TRUE, abbr = TRUE), interval)],
+      steps   = estimates_dow[
+        .SD[, .(dow = wday(date, label = TRUE, abbr = TRUE), interval)],
         average_steps
       ]
     )
   ],
-  dt[!is.na(steps), .(date, interval, Method = "3. Impute: Weekday", Imputed = "No", steps)]
+  dt[!is.na(steps), .(date, interval, Method = "3. Impute: DOW", Imputed = "No", steps)]
 )
 
 # Plot this, show both the original and the imputed variables
@@ -573,11 +575,11 @@ step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
 ])
-hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "Original")
-hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "Impute: Overall")
-hist3 = plot_it(step_by_date_impute[Method == "3. Impute: Weekday"], "Impute: Weekday")
+hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
+hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
+hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
 
-# More convenient arrangement of plots in a grid
+# Arrange plots in a grid easily
 require(gridExtra)
 grid.arrange(hist1, hist2, hist3)
 ```
@@ -596,14 +598,14 @@ step_by_date_impute[,
 ##                Method  N     mean   median
 ## 1:        1. Original 53 10766.19 10765.00
 ## 2: 2. Impute: Overall 61 10766.19 10766.19
-## 3: 3. Impute: Weekday 61 10821.21 11015.00
+## 3:     3. Impute: DOW 61 10821.21 11015.00
 ```
 
 As we can see from the above results, the mean total steps per day didn't
 change for *Impute: Overall* method. The median is slightly higher now, and it
 is the same as the mean. However, the shape of distribution has changed
-visible, and there is now another tall bar around the mean. For *Impute:
-Weekday* method, both the mean and the median are higher after the missing
+visible, and there is now another tall bar around the mean. For *Impute: DOW (Day
+of Week)* method, both the mean and the median are higher after the missing
 data were replaced with imputed values. However, the distribution of total
 steps per day is not much different from the original plot.
 
@@ -618,3 +620,38 @@ counts (i.e. for weekends).
 
 Are there differences in activity patterns between weekdays and weekends?
 --------------------------------------------------------------------------------
+
+In the previous section, we have visually observed that the pattern of daily
+activity was different on different days of the week. To answer the specific
+question about the activity patterns during week days and weekend, we will
+summarize the activities of the week days as one group and the activities of the
+weekends as a second group and plot them.
+
+
+```r
+# Add a variable to identify week days and weekend days
+dt[, Type := ifelse(wday(date) %in% 2:6, "Weekday", "Weekend")]
+
+# Daily activity pattern, summarized separtely for week days and weekends
+weekday_weekend = dt[,
+  .(average_steps = mean(imputed_dow)),
+  .(interval, Type)
+]
+
+# Line graph of average activity during the day: Week day vs Weekend
+# Note: x-axis labels were created in part 2 above
+ggplot(weekday_weekend, aes(x = interval, y = average_steps, group = Type)) +
+  geom_line          (                                                ) +
+  facet_grid         ( Type ~ .                                       ) +
+  ggtitle            ( "Average Daily Activity Pattern"               ) +
+  xlab               ( "Intervals"                                    ) +
+  ylab               ( "Average Steps Taken"                          ) +
+  scale_x_discrete   ( breaks = labels, labels = as.character(labels) ) +
+  scale_y_continuous ( labels = comma                                 ) +
+  theme              ( axis.text.x = element_text(angle = 90)         )
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png) 
+
+These two plots clearly show that the activity patterns between week days and
+weekends are different.

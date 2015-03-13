@@ -434,3 +434,35 @@ counts (i.e. for weekends).
 
 Are there differences in activity patterns between weekdays and weekends?
 --------------------------------------------------------------------------------
+
+In the previous section, we have visually observed that the pattern of daily
+activity was different on different days of the week. To answer the specific
+question about the activity patterns during week days and weekend, we will
+summarize the activities of the week days as one group and the activities of the
+weekends as a second group and plot them.
+
+```{r}
+# Add a variable to identify week days and weekend days
+dt[, Type := ifelse(wday(date) %in% 2:6, "Weekday", "Weekend")]
+
+# Daily activity pattern, summarized separtely for week days and weekends
+weekday_weekend = dt[,
+  .(average_steps = mean(imputed_dow)),
+  .(interval, Type)
+]
+
+# Line graph of average activity during the day: Week day vs Weekend
+# Note: x-axis labels were created in part 2 above
+ggplot(weekday_weekend, aes(x = interval, y = average_steps, group = Type)) +
+  geom_line          (                                                ) +
+  facet_grid         ( Type ~ .                                       ) +
+  ggtitle            ( "Average Daily Activity Pattern"               ) +
+  xlab               ( "Intervals"                                    ) +
+  ylab               ( "Average Steps Taken"                          ) +
+  scale_x_discrete   ( breaks = labels, labels = as.character(labels) ) +
+  scale_y_continuous ( labels = comma                                 ) +
+  theme              ( axis.text.x = element_text(angle = 90)         )
+```
+
+These two plots clearly show that the activity patterns between week days and
+weekends are different.
