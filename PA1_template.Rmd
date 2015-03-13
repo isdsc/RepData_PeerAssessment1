@@ -214,9 +214,9 @@ activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group 
   ggtitle            ( "Average Daily Activity Pattern") +
   xlab               ( "Intervals") +
   ylab               ( "Average Steps Taken") +
-  scale_x_discrete   ( breaks=labels, labels=as.character  ( labels)) +
+  scale_x_discrete   ( breaks = labels, labels = as.character(labels)) +
   scale_y_continuous ( labels = comma) +
-  theme              ( axis.text.x=element_text            ( angle=90))
+  theme              ( axis.text.x = element_text(angle = 90))
 
 # Now, add the info about the max steps to the plot and show it
 activity +
@@ -322,7 +322,8 @@ ggplot(comb, aes(x = interval, y = average_steps)) +
   geom_bar         ( stat = "identity") +
   xlab             ( "Intervals") +
   ylab             ( "Average Steps Taken") +
-  scale_x_discrete ( breaks = labels, labels = as.character(labels)) + theme(axis.text.x = element_text(angle = 90))
+  scale_x_discrete ( breaks = labels, labels = as.character(labels)) +
+  theme            ( axis.text.x = element_text(angle = 90))
 ```
 
 It is clear from these plots that applying day-of-week-specific averages will
@@ -425,7 +426,7 @@ by the higher mean and median steps taken per day during the week which feed
 into the estimates for the missing data which in turn are more numerous for
 week days than for weekends. In other words, we added more data points with
 higher daily step counts (i.e. for week days) than with lower daily step
-counts (i.e. for weekends)
+counts (i.e. for weekends).
 
 
 
