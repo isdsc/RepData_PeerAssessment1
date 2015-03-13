@@ -5,6 +5,10 @@ setwd("~/Coursera/Data Science Specialization/5. Reproducible Research/RepData_P
 library(data.table)
 library(lubridate)
 library(ggplot2)
+require(scales) # for removing scientific notation
+require(grid)
+require(gridExtra)
+
 
 # Load and get the dataset ready
 dt = fread("7za e -so activity.zip activity.csv 2>nul")

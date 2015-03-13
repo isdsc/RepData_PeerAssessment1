@@ -492,3 +492,41 @@ ggplot(dt, aes(x = date, y = imputed_weekday, fill = imputed)) + geom_bar(stat =
 dt[c(20:90, 130, 150, 170, 211:212, 250:255), imputed := FALSE ]
 ggplot(dt, aes(x = date, y = imputed_weekday, fill = imputed)) + geom_bar(stat = "identity")
 dt[is.na(steps), imputed := TRUE ]
+
+
+# Stacking up the plots
+plot_it = function(dt_to_plot, plot_title) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( plot_title ) +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
+}
+
+step_by_date_impute = na.omit(stacked[,
+  .(total_steps = sum(steps)),
+  .(date, Method)
+])
+hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "Original")
+hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "Impute: Overall")
+hist3 = plot_it(step_by_date_impute[Method == "3. Impute: Weekday"], "Impute: Weekday")
+
+
+grid.newpage()
+# These two are probably the same:
+pushViewport(viewport(width = unit(1, "snpc"), height = unit(2, "snpc"), layout = grid.layout(nrow = 3, ncol = 1)))
+pushViewport(viewport(width = 1, height = 2, layout = grid.layout(nrow = 3, ncol = 1)))
+
+print(hist1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(hist2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(hist3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+
+
+# For easier arrangement of plots in a grid
+require(gridExtra)
+grid.arrange(hist1, hist2, hist3)
+
