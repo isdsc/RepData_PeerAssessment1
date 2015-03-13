@@ -240,6 +240,16 @@ unclass(stats)
 names(unclass(stats))
 # NULL
 
+# Some experiments to see if we can get the scale adjuster parameterized
+plot_it = function(dt_to_plot, adj) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram(colour="black", fill="white") +
+    geom_density(aes_string(y=adj), alpha=0.2, fill="#FF6666")
+}
+
+plot_it(steps_by_date, "..scaled..*4.35")
+
+
 
 ################################################################################
 # What is the average daily activity pattern?
@@ -530,6 +540,18 @@ print(hist3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
 require(gridExtra)
 grid.arrange(hist1, hist2, hist3)
 
+temp = step_by_date_impute[Method == "2. Impute: Overall"]
+temp = step_by_date_impute[Method == "3. Impute: Weekday"]
+
+ggplot(temp, aes(x = total_steps)) +
+  geom_histogram(aes(y=..density..), colour="black", fill="white") +
+  geom_density(alpha=0.2, fill="#FF6666")
+
+ggplot(temp, aes(x = total_steps)) +
+  geom_histogram(colour="black", fill="white") +
+  geom_density(aes(y=..scaled..*5.75), alpha=0.2, fill="#FF6666")
+
+plot_it(steps_by_date, "..scaled..")
 
 
 ################################################################################

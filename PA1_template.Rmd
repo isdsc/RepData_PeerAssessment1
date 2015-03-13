@@ -116,21 +116,21 @@ library(ggplot2)
 require(scales)
 
 # Create a function to plot the data with ggplot
-plot_it = function(dt_to_plot, plot_title) {
+plot_it = function(dt_to_plot, scale, plot_title) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
     geom_histogram     ( colour = "black", fill = "white") +
     ggtitle            ( plot_title ) +
     xlab               ( "Total Steps in a Day") +
     ylab               ( "Number of Days") +
     scale_x_continuous ( labels = comma) +
-    geom_density       ( aes(y = ..scaled..*4.35), alpha = 0.2, fill = "#FF6666") +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666") +
     geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
                          color = "red", size = 1) +
     geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
                          color = "blue", linetype = "dashed", size = 1)
 }
 
-plot_it(steps_by_date, "Distribution of Total Steps per Day")
+plot_it(steps_by_date, "..scaled..*4.35", "Distribution of Total Steps per Day")
 
 # Get the mean and median: now we have to use na.rm to remove days with NAs
 stats = steps_by_date[,
@@ -165,11 +165,11 @@ approach.
 
 ```{r, message=FALSE}
 # Original approach
-plot1 = plot_it(steps_by_date, "Original")
+plot1 = plot_it(steps_by_date, "..scaled..*4.35", "Original")
 
 # Alternative approach
 steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
-plot2 = plot_it(steps_by_date_alt, "Initial `sum()` with `na.rm = TRUE` Option")
+plot2 = plot_it(steps_by_date_alt, "..scaled..*4", "Initial `sum()` with `na.rm = TRUE` Option")
 
 # Stack the two plots
 require(grid)
@@ -400,9 +400,9 @@ step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
 ])
-hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "Original")
-hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "Impute: Overall")
-hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "Impute: DOW")
+hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
+hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
+hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
 
 # Arrange plots in a grid easily
 require(gridExtra)
@@ -418,8 +418,8 @@ step_by_date_impute[,
 As we can see from the above results, the mean total steps per day didn't
 change for *Impute: Overall* method. The median is slightly higher now, and it
 is the same as the mean. However, the shape of distribution has changed
-visible, and there is now another tall bar around the mean. For *Impute: Day
-of Week* method, both the mean and the median are higher after the missing
+visible, and there is now another tall bar around the mean. For *Impute: DOW (Day
+of Week)* method, both the mean and the median are higher after the missing
 data were replaced with imputed values. However, the distribution of total
 steps per day is not much different from the original plot.
 
