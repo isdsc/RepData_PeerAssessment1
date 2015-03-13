@@ -48,9 +48,9 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
 ##  Kernel  Time =     0.000 =    0% 
-##  User    Time =     0.000 =    0% 
-##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.017 =  100%    Physical Memory =      5 MB
+##  User    Time =     0.015 =   99% 
+##  Process Time =     0.015 =   99%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -209,10 +209,10 @@ library(ggplot2)
 require(scales)
 
 # Create a function to plot the data with ggplot
-plot_it = function(dt_to_plot) {
+plot_it = function(dt_to_plot, plot_title) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
     geom_histogram     ( colour = "black", fill = "white") +
-    ggtitle            ( "Distribution of Total Steps per Day") +
+    ggtitle            ( plot_title ) +
     xlab               ( "Total Steps in a Day") +
     ylab               ( "Number of Days") +
     scale_x_continuous ( labels = comma) +
@@ -221,7 +221,7 @@ plot_it = function(dt_to_plot) {
     geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
 }
 
-plot_it(steps_by_date)
+plot_it(steps_by_date, "Distribution of Total Steps per Day")
 ```
 
 ```
@@ -270,11 +270,11 @@ approach.
 
 ```r
 # Original approach
-plot1 = plot_it(steps_by_date)
+plot1 = plot_it(steps_by_date, "Original")
 
 # Alternative approach
 steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
-plot2 = plot_it(steps_by_date_alt)
+plot2 = plot_it(steps_by_date_alt, "Initial `sum()` with `na.rm = TRUE` Option")
 
 # Stack the two plots
 require(grid)
@@ -356,9 +356,9 @@ activity = ggplot(steps_by_interval, aes(x = interval, y = average_steps, group 
   ggtitle            ( "Average Daily Activity Pattern") +
   xlab               ( "Intervals") +
   ylab               ( "Average Steps Taken") +
-  scale_x_discrete   ( breaks=labels, labels=as.character  ( labels)) +
+  scale_x_discrete   ( breaks = labels, labels = as.character(labels)) +
   scale_y_continuous ( labels = comma) +
-  theme              ( axis.text.x=element_text            ( angle=90))
+  theme              ( axis.text.x = element_text(angle = 90))
 
 # Now, add the info about the max steps to the plot and show it
 activity +
@@ -491,7 +491,8 @@ ggplot(comb, aes(x = interval, y = average_steps)) +
   geom_bar         ( stat = "identity") +
   xlab             ( "Intervals") +
   ylab             ( "Average Steps Taken") +
-  scale_x_discrete ( breaks = labels, labels = as.character(labels)) + theme(axis.text.x = element_text(angle = 90))
+  scale_x_discrete ( breaks = labels, labels = as.character(labels)) +
+  theme            ( axis.text.x = element_text(angle = 90))
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
@@ -552,55 +553,40 @@ stacked = rbind(
 )
 
 # Plot this, show both the original and the imputed variables
-ggplot(stacked, aes(x = date, y = steps, fill = Imputed)) +
-  geom_bar(stat = "identity") +
-  facet_grid(Method ~ .) +
-  xlab("Date") +
-  ylab("Steps")
+ggplot(stacked, aes(x = date, y = steps, fill = Imputed) ) +
+  geom_bar   ( stat = "identity" ) +
+  facet_grid ( Method ~ . ) +
+  xlab       ( "Date" ) +
+  ylab       ( "Steps" )
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
-Now, let's review if the mean and the median were affected because we have
+Now, let's review if the distribution from part 2 was affected because we have
 imputed values for the missing data.
 
 
 
 ```r
-# mean steps taken - comparison
-stacked[,
-  .(total_steps = sum(steps, na.rm = TRUE)),
-  .(date, Method)
-][,
-  .(.N, mean = mean(total_steps), median = median(total_steps)),
-  Method
-]
-```
-
-```
-##                Method  N     mean   median
-## 1:        1. Original 61  9354.23 10395.00
-## 2: 2. Impute: Overall 61 10766.19 10766.19
-## 3: 3. Impute: Weekday 61 10821.21 11015.00
-```
-
-This result is somewhat unexpected: when we replace the missing values with
-the mean of the sample (i.e. `impute_overall`), the mean should not change.
-Upon further inspection, we can see that when the `sum()` function's
-`na.rm=TRUE` option is used, if all the intervals for a day have missing
-values, the `by` processing keeps the day, and the `sum()` evaluates to zero.
-If we take the means of the aggreated days, the resulting mean is lower than
-what it should be because we are including extra zeros in the calculation. To
-correct this problem, we need to omit the entire row if there is a missing
-value.
-
-
-```r
-# mean steps taken - corrected comparison
-na.omit(stacked[,
+# histogram - comparison
+step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
-])[,
+])
+hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "Original")
+hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "Impute: Overall")
+hist3 = plot_it(step_by_date_impute[Method == "3. Impute: Weekday"], "Impute: Weekday")
+
+# More convenient arrangement of plots in a grid
+require(gridExtra)
+grid.arrange(hist1, hist2, hist3)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-12-1.png) 
+
+```r
+# mean steps taken - comparison
+step_by_date_impute[,
   .(.N, mean = mean(total_steps), median = median(total_steps)),
   Method
 ]
@@ -614,13 +600,19 @@ na.omit(stacked[,
 ```
 
 As we can see from the above results, the mean total steps per day didn't
-change for *impute method 1*. The median is slightly higher now, and it is the
-same as the mean. For *impute method 2*, both the mean and the median are
-higher after the missing data were replaced with imputed values: using the
-day-of-week-specific interval averages results in higher mean and median steps
-taken per day because the subject has taken fewer steps during the weekend
-days on the average compared to the week days, and there are more week days
-with missing data compared to weekend days (see the next section).
+change for *Impute: Overall* method. The median is slightly higher now, and it
+is the same as the mean. However, the shape of distribution has changed
+visible, and there is now another tall bar around the mean. For *Impute:
+Weekday* method, both the mean and the median are higher after the missing
+data were replaced with imputed values. However, the distribution of total
+steps per day is not much different from the original plot.
+
+The higher mean and median resulting from the second method can be explained
+by the higher mean and median steps taken per day during the week which feed
+into the estimates for the missing data which in turn are more numerous for
+week days than for weekends. In other words, we added more data points with
+higher daily step counts (i.e. for week days) than with lower daily step
+counts (i.e. for weekends).
 
 
 
