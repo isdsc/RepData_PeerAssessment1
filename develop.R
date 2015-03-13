@@ -455,7 +455,7 @@ comb = rbind(estimates_overall, estimates)[, day := ifelse(weekday == 0, "All", 
 
 # How about by week day?
 estimates_overall[, day := "All"]
-# This ifelse() doesn't work
+
 comb = rbind(estimates_overall, estimates[, day := wday(weekday, label = TRUE, abbr = TRUE)])
 
 ggplot(comb, aes(x = interval, y = average_steps)) +
@@ -530,3 +530,53 @@ print(hist3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
 require(gridExtra)
 grid.arrange(hist1, hist2, hist3)
 
+
+
+################################################################################
+# Are there differences in activity patterns between weekdays and weekends?
+################################################################################
+# For this part the weekdays() function may be of some help here. Use the
+# dataset with the filled-in missing values for this part.
+# 1. Create a new factor variable in the dataset with two levels – “weekday”
+#    and “weekend” indicating whether a given date is a weekday or weekend
+#    day.
+# 2. Make a panel plot containing a time series plot (i.e. type = "l") of the
+#    5-minute interval (x-axis) and the average number of steps taken,
+#    averaged across all weekday days or weekend days (y-axis). See the README
+#    file in the GitHub repository to see an example of what this plot should
+#    look like using simulated data.
+
+weekday_activity = dt[
+  wday(date) %in% 2:6,
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  interval
+]
+
+weekend_activity = dt[
+  wday(date) %in% c(1, 7),
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  interval
+]
+
+summary(weekday_activity)
+summary(weekend_activity)
+
+
+# This is easier to follow
+dt[, Type := ifelse(wday(date) %in% 2:6, "Weekday", "Weekend")]
+
+weekday_weekend = dt[,
+  .(nobs = sum(!is.na(steps)), average_steps = mean(steps, na.rm = TRUE)),
+  .(interval, Type)
+]
+
+summary(weekday_weekend, Type)
+
+weekday_weekend = dt[,
+  .(nobs = sum(imputed_weekday), average_steps = mean(imputed_weekday)),
+  .(interval, Type)
+]
+
+ggplot(weekday_weekend, aes(x = interval, y = average_steps, group = Type)) +
+  geom_line() +
+  facet_grid(Type ~ .)
