@@ -517,6 +517,7 @@ plot_it = function(dt_to_plot, plot_title) {
     geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1)
 }
 
+# stacked is in the Rmd document, replicated in load-dt.R for convenience
 step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
@@ -535,6 +536,45 @@ print(hist1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(hist2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 print(hist3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
 
+# Note that if we used facets, the y-axes would have the same scale:
+ggplot(step_by_date_impute, aes(x = total_steps)) +
+    geom_histogram     ( aes(y = ..density..), colour = "black", fill = "white") +
+    facet_grid         ( Method  ~ .) +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( alpha = 0.2, fill = "#FF6666")
+
+ggplot(step_by_date_impute, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white") +
+    facet_grid         ( Method  ~ .) +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes(y = ..scaled..*7), alpha = 0.2, fill = "#FF6666")
+
+
+# Force the same range for all plots by hard-coding the ylim (data outside the range is ignored)
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram() + ylim(0, 12.5)
+# Instead of setting the limits of the data, coord_cartesian sets the viewing area of the data.
+ggplot(steps_by_date, aes(x = total_steps)) + geom_histogram() + coord_cartesian( ylim = c(-0.5, 13))
+
+plot_it = function(dt_to_plot, scale, plot_title) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( plot_title ) +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),   color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1) +
+    coord_cartesian    ( ylim = c(-0.5, 13))
+}
+
+hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
+hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
+hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
 
 # For easier arrangement of plots in a grid
 require(gridExtra)

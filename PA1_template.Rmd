@@ -394,15 +394,33 @@ Now, let's review if the distribution from part 2 was affected because we have
 imputed values for the missing data.
 
 
-```{r, message=FALSE, fig.width=6, fig.height=9}
-# histogram - comparison
+```{r, message=FALSE, fig.width=7, fig.height=10.5}
+# Compare histograms after imputing
 step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
 ])
-hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
-hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
-hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
+
+# Create a function to plot the data with ggplot
+# Since we are not using facets, manually force the same y scale
+plot_it2 = function(dt_to_plot, scale, plot_title) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white") +
+    ggtitle            ( plot_title ) +
+    xlab               ( "Total Steps in a Day") +
+    ylab               ( "Number of Days") +
+    scale_x_continuous ( labels = comma) +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666") +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
+                         color = "red", size = 1) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
+                         color = "blue", linetype = "dashed", size = 1) +
+    coord_cartesian    ( ylim = c(-0.5, 13))
+}
+
+hist1 = plot_it2(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
+hist2 = plot_it2(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
+hist3 = plot_it2(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
 
 # Arrange plots in a grid easily
 require(gridExtra)
