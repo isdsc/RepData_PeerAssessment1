@@ -47,10 +47,10 @@ cat(paste(system("7za l activity.zip", intern = TRUE), "\n"))
 ##  ------------------- ----- ------------ ------------  ------------------------ 
 ##  2014-02-11 11:08:20             350829        53385  1 files 
 ##   
-##  Kernel  Time =     0.000 =    0% 
+##  Kernel  Time =     0.015 =   86% 
 ##  User    Time =     0.000 =    0% 
-##  Process Time =     0.000 =    0%    Virtual  Memory =      3 MB 
-##  Global  Time =     0.015 =  100%    Physical Memory =      5 MB
+##  Process Time =     0.015 =   86%    Virtual  Memory =      3 MB 
+##  Global  Time =     0.018 =  100%    Physical Memory =      5 MB
 ```
 
 ```r
@@ -211,16 +211,16 @@ require(scales)
 # Create a function to plot the data with ggplot
 plot_it = function(dt_to_plot, scale, plot_title) {
   ggplot(dt_to_plot, aes(x = total_steps)) +
-    geom_histogram     ( colour = "black", fill = "white") +
-    ggtitle            ( plot_title ) +
-    xlab               ( "Total Steps in a Day") +
-    ylab               ( "Number of Days") +
-    scale_x_continuous ( labels = comma) +
-    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666") +
+    geom_histogram     ( colour = "black", fill = "white"                     ) +
+    ggtitle            ( plot_title                                           ) +
+    xlab               ( "Total Steps in a Day"                               ) +
+    ylab               ( "Number of Days"                                     ) +
+    scale_x_continuous ( labels = comma                                       ) +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666" ) +
     geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
-                         color = "red", size = 1) +
+                         color = "red", size = 1                              ) +
     geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
-                         color = "blue", linetype = "dashed", size = 1)
+                         color = "blue", linetype = "dashed", size = 1        )
 }
 
 plot_it(steps_by_date, "..scaled..*4.35", "Distribution of Total Steps per Day")
@@ -236,8 +236,8 @@ plot_it(steps_by_date, "..scaled..*4.35", "Distribution of Total Steps per Day")
 # Get the mean and median: now we have to use na.rm to remove days with NAs
 stats = steps_by_date[,
   .(
-    mean   = mean(total_steps, na.rm = TRUE),
-    median = median(total_steps, na.rm = TRUE)
+    mean   = mean   ( total_steps, na.rm = TRUE ),
+    median = median ( total_steps, na.rm = TRUE )
   )
 ]
 
@@ -271,12 +271,28 @@ approach.
 
 
 ```r
+# Since we are not using facets, manually force the same x-axis scale
+plot_it2 = function(dt_to_plot, scale, plot_title) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white"                     ) +
+    ggtitle            ( plot_title                                           ) +
+    xlab               ( "Total Steps in a Day"                               ) +
+    ylab               ( "Number of Days"                                     ) +
+    scale_x_continuous ( labels = comma                                       ) +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666" ) +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
+                         color = "red", size = 1                              ) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
+                         color = "blue", linetype = "dashed", size = 1        ) +
+    coord_cartesian    ( xlim = c(-2000, 23000)                               )
+}
+
 # Original approach
-plot1 = plot_it(steps_by_date, "..scaled..*4.35", "Original")
+plot1 = plot_it2(steps_by_date, "..scaled..*4.35", "Original")
 
 # Alternative approach
 steps_by_date_alt = dt[, .( total_steps = sum(steps, na.rm = TRUE) ), date]
-plot2 = plot_it(steps_by_date_alt, "..scaled..*4", "Initial `sum()` with `na.rm = TRUE` Option")
+plot2 = plot_it2(steps_by_date_alt, "..scaled..*4", "With `na.rm = TRUE` Option")
 
 # Stack the two plots
 require(grid)
@@ -421,8 +437,8 @@ specific days had missing data. The following section provides some comparisons.
 # Days without data
 missing_days = dt[,
   .(
-    nmiss   = nrow(na.omit(.SD, invert = TRUE)),
-    dow = wday(date, label = TRUE, abbr = TRUE)
+    nmiss = nrow(na.omit(.SD, invert = TRUE)),
+    dow   = wday(date, label = TRUE, abbr = TRUE)
   ),
   date
 ][nmiss > 0]
@@ -570,14 +586,31 @@ imputed values for the missing data.
 
 
 ```r
-# histogram - comparison
+# Compare histograms after imputing steps
 step_by_date_impute = na.omit(stacked[,
   .(total_steps = sum(steps)),
   .(date, Method)
 ])
-hist1 = plot_it(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
-hist2 = plot_it(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
-hist3 = plot_it(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
+
+# Since we are not using facets, manually force the same y-axis scale
+plot_it3 = function(dt_to_plot, scale, plot_title) {
+  ggplot(dt_to_plot, aes(x = total_steps)) +
+    geom_histogram     ( colour = "black", fill = "white"                     ) +
+    ggtitle            ( plot_title                                           ) +
+    xlab               ( "Total Steps in a Day"                               ) +
+    ylab               ( "Number of Days"                                     ) +
+    scale_x_continuous ( labels = comma                                       ) +
+    geom_density       ( aes_string(y = scale), alpha = 0.2, fill = "#FF6666" ) +
+    geom_vline         ( aes(xintercept = mean(total_steps, na.rm = TRUE)),
+                         color = "red", size = 1                              ) +
+    geom_vline         ( aes(xintercept = median(total_steps, na.rm = TRUE)),
+                         color = "blue", linetype = "dashed", size = 1        ) +
+    coord_cartesian    ( ylim = c(-0.5, 13)                                   )
+}
+
+hist1 = plot_it3(step_by_date_impute[Method == "1. Original"]       , "..scaled..*4.35", "Original")
+hist2 = plot_it3(step_by_date_impute[Method == "2. Impute: Overall"], "..scaled..*7.50", "Impute: Overall")
+hist3 = plot_it3(step_by_date_impute[Method == "3. Impute: DOW"]    , "..scaled..*5.55", "Impute: DOW")
 
 # Arrange plots in a grid easily
 require(gridExtra)
